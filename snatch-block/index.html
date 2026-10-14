@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: rigging diagram left, blank test organizer right; stacks on phones. Single dark look by choice: projector-friendly. */
+/* Layout: rigging diagram left, blank organizer right; stacks on phones. Single dark look by choice: projector-friendly. */
 :root{
   --bg:#060a13; --panel:#0d1524; --panel2:#121e33; --line:#223250; --fg:#eef2f7; --muted:#8c9cb5; --dim:#4a5a75;
   --accent:#38bdf8; --accent-ink:#04121d; --good:#4ade80; --warn:#fbbf24; --rope:#d5dde8;
@@ -272,6 +272,9 @@ h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4p
 .sheet.rp1 .s1 .secHead,.sheet.rp2 .s2 .secHead,.sheet.rp3 .s3 .secHead{color:var(--accent)}
 .sheet.rp2 .s1 .secHead,.sheet.rp3 .s1 .secHead,.sheet.rp3 .s2 .secHead,.sheet.rp4 .secHead{color:var(--muted)}
 .sheet.rp1 .s2 .lrow,.sheet.rp1 .s3 .lrow,.sheet.rp2 .s3 .lrow{opacity:.35}
+#sheet.sheet{min-width:0;width:100%}
+.lt{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.opt{font-size:.62rem;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:0 4px;text-transform:uppercase;font-weight:600}
 footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;margin:0 auto}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -301,17 +304,17 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
 
   <main>
     <section id="menu">
-      <h1>Work it like the test</h1>
+      <h1>Work the rig, one pass at a time</h1>
       <p class="lede">You get the rigging picture and a blank organizer. Nothing gets filled in for you. Carry your own numbers down the line out column, lock it in, then go back to Block 1 for the tensions. Your sheet gets graded at the end.</p>
       <div class="menuGrid">
         <div class="modes">
           <button class="mode" type="button" data-mode="simple"><span class="k">2 problems · 1 block</span><b>Simple</b><p>Start here. One block. Get the line out first, then go back for the SBT.</p></button>
-          <button class="mode" type="button" data-mode="test"><span class="k">5 problems · 2 to 3 blocks</span><b>Test Mode</b><p>Fill the whole organizer yourself. Graded when you turn it in, with notes on where the chain broke.</p></button>
-          <button class="mode" type="button" data-mode="timed"><span class="k">5 problems · clock running</span><b>Timed Test</b><p>Same sheets, with a clock. Beat your best time without giving up accuracy.</p></button>
-          <button class="mode star" type="button" data-mode="rig"><span class="k">5 problems · full rig, like the test</span><b>Test Day</b><p>Pole, parted blocks, SB1 and SB2. Haul line and hook strain first, then line outs, then tensions.</p></button>
+          <button class="mode" type="button" data-mode="test"><span class="k">5 problems · 2 to 3 blocks</span><b>Full Sheet</b><p>Fill the whole organizer yourself. Graded when you turn it in, with notes on where the chain broke.</p></button>
+          <button class="mode" type="button" data-mode="timed"><span class="k">5 problems · clock running</span><b>Timed Run</b><p>Same sheets, with a clock. Beat your best time without giving up accuracy.</p></button>
+          <button class="mode star" type="button" data-mode="rig"><span class="k">5 problems · pole, blocks, SB1, SB2</span><b>Full Rig</b><p>Pole, parted blocks, SB1 and SB2. Haul line and hook strain first, then line outs, then tensions.</p></button>
         </div>
         <div class="habit">
-          <h2>On the test, draw this first</h2>
+          <h2>Before you start, draw this</h2>
           <ol>
             <li>Number the blocks from the load out. Block 1 holds the load.</li>
             <li>Write two lists: <b>Line outs</b> on top, <b>SBTs</b> underneath.</li>
@@ -319,7 +322,7 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
             <li><b>Pass 2:</b> once all line outs are done, go back to Block 1. Factor, then SBT, for each block.</li>
           </ol>
           <div class="rule">SBT₂ uses LO₂. Same row, every time.</div>
-          <h2>Test day: the full rig</h2>
+          <h2>The full rig</h2>
           <ol>
             <li><b>Blocks first:</b> Haul line = 1.1ᴾ × W ÷ P. Hook strain = Haul line + W.</li>
             <li><b>Line outs:</b> SB1's line in is the haul line. × 1.1 for LO₁, then × 1.1 again for LO₂.</li>
@@ -359,7 +362,7 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
 
     <section id="summary" hidden>
       <div class="summary">
-        <h1 id="sTitle">Test complete</h1>
+        <h1 id="sTitle">Set complete</h1>
         <div class="sumGrid">
           <div><span>Score</span><b id="sScore">0</b></div>
           <div><span>Cells right</span><b id="sAcc">0%</b></div>
@@ -415,7 +418,7 @@ const FACS=[0,1,1.41,1.73,1.84,2];
 const angOf=f=>ANG.find(a=>Math.abs(F[a]-f)<.001);
 const SUB='₀₁₂₃₄₅';
 const sb=i=>SUB[i+1];
-const MODES={simple:{name:'Simple'},test:{name:'Test Mode'},timed:{name:'Timed Test'},rig:{name:'Test Day'}};
+const MODES={simple:{name:'Simple'},test:{name:'Full Sheet'},timed:{name:'Timed Run'},rig:{name:'Full Rig'}};
 const PLANS={simple:[1,1],test:[2,2,3,3,3],timed:[2,2,3,3,3],rig:[1,1,1,1,1]};
 let PLAN=[];
 const $=id=>document.getElementById(id);
@@ -612,7 +615,7 @@ function grade(){
   S.score+=pts;S.right+=right;S.cells+=total;
   if(clean)S.clean++;
   const rep=$('report');rep.hidden=false;
-  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>Every line out, factor, and SBT is right. That's how it should look on the test.</div>`}
+  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>Every line out, factor, and SBT is right. Every block, every number, right where it belongs.</div>`}
   else{
     rep.className='report issues';
     const uniq=[...new Set(notes)].slice(0,6);
@@ -622,7 +625,7 @@ function grade(){
   setPhase(3);hud();
 }
 
-/* ---------- test day: full rig ---------- */
+/* ---------- full rig ---------- */
 const WORDS=['','one','two','three','four','five','six'];
 const PASS0=['pass1','pass2','pass3'].map(id=>$(id).innerHTML);
 const PASSR=['Pass 1 · Blocks<small>haul line, hook strain</small>','Pass 2 · Line outs<small>SB1, then SB2</small>','Pass 3 · Tensions<small>back to SB1</small>'];
@@ -703,48 +706,50 @@ function buildRigSheet(){
   const mir=id=>`<span class="mirror" id="${id}">—</span>`;
   $('sheet').innerHTML=`
   <div class="sec s1"><div class="secHead">Pass 1 · The blocks<small>P = ${p.P} · W = ${fmt(p.W)}</small></div>
-   <div class="lrow"><span class="blk">Haul</span><label>Friction 1.1ᴾ${inp('c-rf','friction 1.1 to the P','af')}</label><span class="op">× W ÷ P =</span><label>Haul line${inp('c-rhl','haul line')}</label></div>
+   <div class="lrow"><span class="blk">Haul</span><label><span class="lt">1.1ᴾ <span class="opt">optional</span></span>${inp('c-rf','friction 1.1 to the P, optional','af')}</label><span class="op">× W ÷ P =</span><label>Haul line${inp('c-rhl','haul line')}</label></div>
    <div class="lrow"><span class="blk">Hook</span><label>Haul line${mir('mhl1')}</label><span class="op">+ W =</span><label>Hook strain${inp('c-rhs','hook strain')}</label></div></div>
   <div class="sec s2"><div class="secHead">Pass 2 · Line outs<small>Line out = Line in × 1.1</small></div>
    <div class="lrow"><span class="blk">SB1</span><label>Line in = haul line${mir('mhl2')}</label><span class="op">× 1.1 =</span><label>LO₁${inp('c-rlo1','SB1 line out')}</label></div>
    <div class="lrow"><span class="blk">SB2</span><label>LO₁ from above${mir('mlo1')}</label><span class="op">× 1.1 =</span><label>LO₂${inp('c-rlo2','SB2 line out')}</label></div></div>
   <div class="sec s3"><div class="secHead">Pass 3 · Back to SB1 for SBTs<small>SBT = Line out × factor</small></div>
-   <div class="lrow"><span class="blk">SB1</span><label>LO₁${mir('mlo1b')}</label><span class="op">×</span><label>Factor <span class="ang">at ${p.t1}°</span>${inp('c-raf1','SB1 angle factor','af')}</label><span class="op">=</span><label>SBT₁${inp('c-rsb1','SB1 tension')}</label></div>
-   <div class="lrow"><span class="blk">SB2</span><label>LO₂${mir('mlo2')}</label><span class="op">×</span><label>Factor <span class="ang">at ${p.t2}°</span>${inp('c-raf2','SB2 angle factor','af')}</label><span class="op">=</span><label>SBT₂${inp('c-rsb2','SB2 tension')}</label></div></div>`;
+   <div class="lrow"><span class="blk">SB1</span><label>LO₁${mir('mlo1b')}</label><span class="op">×</span><label><span class="lt">Factor <span class="ang">at ${p.t1}°</span><span class="opt">optional</span></span>${inp('c-raf1','SB1 angle factor, optional','af')}</label><span class="op">=</span><label>SBT₁${inp('c-rsb1','SB1 tension')}</label></div>
+   <div class="lrow"><span class="blk">SB2</span><label>LO₂${mir('mlo2')}</label><span class="op">×</span><label><span class="lt">Factor <span class="ang">at ${p.t2}°</span><span class="opt">optional</span></span>${inp('c-raf2','SB2 angle factor, optional','af')}</label><span class="op">=</span><label>SBT₂${inp('c-rsb2','SB2 tension')}</label></div></div>`;
 }
-const RIGO={1:['c-rf','c-rhl','c-rhs'],2:['c-rlo1','c-rlo2'],3:['c-raf1','c-rsb1','c-raf2','c-rsb2']};
+const RIGIN={1:['c-rf','c-rhl','c-rhs'],2:['c-rlo1','c-rlo2'],3:['c-raf1','c-rsb1','c-raf2','c-rsb2']};
+const RIGO={1:['c-rhl','c-rhs'],2:['c-rlo1','c-rlo2'],3:['c-rsb1','c-rsb2']};
+const OPT=new Set(['c-rf','c-raf1','c-raf2']);
 const rigMir=()=>{const sh=(id,src)=>{const v=val(src);$(id).textContent=isFinite(v)?fmt(v):'—'};sh('mhl1','c-rhl');sh('mhl2','c-rhl');sh('mlo1','c-rlo1');sh('mlo1b','c-rlo1');sh('mlo2','c-rlo2')};
 function setPhaseRig(ph){
   S.phase=ph;$('sheet').className='sheet rp'+ph;rigMir();
-  [1,2,3].forEach(k=>RIGO[k].forEach(id=>{const e=$(id);if(ph===4)return;e.disabled=k!==ph;e.classList.toggle('locked',k<ph)}));
+  [1,2,3].forEach(k=>RIGIN[k].forEach(id=>{const e=$(id);if(ph===4)return;e.disabled=k!==ph;e.classList.toggle('locked',k<ph)}));
   ['pass1','pass2','pass3'].forEach((id,k)=>{$(id).className='pass '+(k+1===ph?'on':k+1<ph?'done':'')});
   const act=$('btnAct');
-  const I={1:`<b>Pass 1.</b> Work the blocks: haul line = 1.1ᴾ × W ÷ P, then hook strain = haul line + W.`,
+  const I={1:`<b>Pass 1.</b> Haul line = 1.1ᴾ × W ÷ P. Use 1.1ᴾ, or multiply the weight by 1.1 once for every part, then divide by P. Either way works. Then hook strain = haul line + W.`,
            2:`<b>Pass 2.</b> Line outs. SB1's line in is the haul line, not the hook strain. × 1.1, then × 1.1 again for SB2.`,
-           3:`<b>Pass 3.</b> Back to SB1. Pick the factor from the table, then SBT = that block's line out × factor.`,
+           3:`<b>Pass 3.</b> Back to SB1. SBT = that block's line out × the angle factor from the table. The factor boxes are optional.`,
            4:`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. The picture now shows every number.`};
   $('instr').innerHTML=I[ph];
   act.textContent=ph===1?'Blocks done → line outs':ph===2?'Line outs done → tensions':ph===3?'Turn in my sheet':(S.round>=PLAN.length?'See results →':'Next problem →');
   $('msg').textContent='';
-  if(ph<4){try{$(RIGO[ph][0]).focus({preventScroll:true})}catch(e){}}else try{act.focus({preventScroll:true})}catch(e){}
+  if(ph<4){try{$(RIGIN[ph][0]).focus({preventScroll:true})}catch(e){}}else try{act.focus({preventScroll:true})}catch(e){}
 }
 function gradeRig(){
-  const p=S.prob,u={};Object.values(RIGO).flat().forEach(id=>u[id]=val(id));
+  const p=S.prob,u={};Object.values(RIGIN).flat().forEach(id=>u[id]=val(id));
   const T={'c-rf':p.fr,'c-rhl':p.hl,'c-rhs':p.hs,'c-rlo1':p.lo1,'c-rlo2':p.lo2,'c-raf1':p.af1,'c-rsb1':p.sbt1,'c-raf2':p.af2,'c-rsb2':p.sbt2};
   const okF=(v,a)=>isFinite(v)&&Math.abs(v-a)<=Math.max(.006,Math.abs(a)*.005);
-  let right=0;
-  Object.keys(T).forEach(id=>{const isF=id==='c-rf'||id.startsWith('c-raf');const ok=isF?okF(u[id],T[id]):near(u[id],T[id]);
+  let right=0,total=0;
+  Object.keys(T).forEach(id=>{const e0=$(id);if(OPT.has(id)&&!isFinite(u[id])){e0.disabled=true;e0.classList.remove('locked');return}total++;const isF=id==='c-rf'||id.startsWith('c-raf');const ok=isF?okF(u[id],T[id]):near(u[id],T[id]);
     const e=$(id);e.disabled=true;e.classList.remove('locked');e.classList.add(ok?'ok':'bad');if(ok)right++;
     else{const s_=document.createElement('span');s_.className='fix';s_.textContent=isF?String(Number(T[id].toFixed(4))):fmt(T[id]);e.after(s_)}});
   const N=[],W=p.W,P=p.P,uf=u['c-rf'],uh=u['c-rhl'],us=u['c-rhs'],l1=u['c-rlo1'],l2=u['c-rlo2'];
-  if(!okF(uf,p.fr)){
+  if(isFinite(uf)&&!okF(uf,p.fr)){
     if(okF(uf,1.1*P))N.push(`Friction: 1.1ᴾ is 1.1 multiplied by itself ${P} times, not 1.1 × ${P}. On the calculator: 1.1 yˣ ${P} =.`);
     else N.push(`Friction: 1.1^${P} = ${Number(p.fr.toFixed(4))}.`);
   }
   if(!near(uh,p.hl)){
     if(near(uh,p.fr*W))N.push(`Haul line: you didn't divide by P (${P}).`);
     else if(near(uh,W/P))N.push(`Haul line: that's W ÷ P with no friction. Multiply by 1.1ᴾ.`);
-    else if(isFinite(uf)&&near(uh,uf*W/P))N.push(`Haul line math is right. It's off only because the friction number was off.`);
+    else if(isFinite(uf)&&!okF(uf,p.fr)&&near(uh,uf*W/P))N.push(`Haul line math is right. It's off only because the friction number was off.`);
     else N.push(`Haul line: 1.1ᴾ × W ÷ P = ${fmt(p.hl)}.`);
   }
   if(!near(us,p.hs)){
@@ -766,19 +771,20 @@ function gradeRig(){
     else N.push(`SB2: LO₂ = LO₁ × 1.1.`);
   }
   [[1,p.t1,p.af1,'c-raf1','c-rsb1',l1,'LO₁',l2,'LO₂'],[2,p.t2,p.af2,'c-raf2','c-rsb2',l2,'LO₂',l1,'LO₁']].forEach(([n,th,af,fi,si,lo,lon,oth,othn])=>{
-    const ua=u[fi],us_=u[si];
-    if(!okF(ua,af))N.push(`SB${n}: ${th}° is factor ${af}${isFinite(ua)&&angOf(ua)!==undefined?`, not ${ua} (that's ${angOf(ua)}°)`:''}.`);
+    const ua0=u[fi],ua=isFinite(ua0)?ua0:af,us_=u[si];
+    if(isFinite(ua0)&&!okF(ua0,af))N.push(`SB${n}: ${th}° is factor ${af}${isFinite(ua)&&angOf(ua)!==undefined?`, not ${ua} (that's ${angOf(ua)}°)`:''}.`);
     if(!near(us_,n===1?p.sbt1:p.sbt2)){
       if(isFinite(oth)&&isFinite(ua)&&near(us_,oth*ua))N.push(`SBT${n}: you used ${othn}. SBT${n} uses ${lon}, same row.`);
       else if(isFinite(lo)&&isFinite(ua)&&near(us_,lo*ua))N.push(`SBT${n} math is right. It's off only because the line out or factor was off.`);
-      else N.push(`SBT${n} = ${lon} × factor.`);
+      else if(isFinite(lo)&&ANG.some(a=>F[a]!==af&&near(us_,lo*F[a]))){const wa=ANG.find(a=>F[a]!==af&&near(us_,lo*F[a]));N.push(`SBT${n}: looks like you used ${F[wa]} (that's ${wa}°). ${th}° is factor ${af}.`)}
+      else N.push(`SBT${n} = ${lon} × factor (${af} at ${th}°).`);
     }
   });
-  const clean=right===9,pts=right*15+(clean?150:0);
-  S.score+=pts;S.right+=right;S.cells+=9;if(clean)S.clean++;
+  const clean=right===total,pts=right*15+(clean?150:0);
+  S.score+=pts;S.right+=right;S.cells+=total;if(clean)S.clean++;
   const rep=$('report');rep.hidden=false;
-  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>Haul line, hook strain, both line outs, both factors and both SBTs are right. That's a test-day answer.</div>`}
-  else{rep.className='report issues';rep.innerHTML=`<b class="head">${right} of 9 cells right · +${pts}</b><ul>${[...new Set(N)].slice(0,6).map(t=>`<li>${t}</li>`).join('')}</ul><div>Correct values are shown under each cell in green.</div>`}
+  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>Haul line, hook strain, both line outs and both SBTs are right.</div>`}
+  else{rep.className='report issues';rep.innerHTML=`<b class="head">${right} of ${total} boxes right · +${pts}</b><ul>${[...new Set(N)].slice(0,6).map(t=>`<li>${t}</li>`).join('')}</ul><div>Correct values are shown under each cell in green.</div>`}
   drawRig(p,{show:true});setPhaseRig(4);hud();
 }
 
@@ -805,7 +811,7 @@ function next(){
   $('report').hidden=true;S.pStart=Date.now();
   if(S.mode==='rig'){
     S.prob=makeRig();
-    $('pTag').textContent=`Preview question · ${S.round} of ${PLAN.length}`;
+    $('pTag').textContent=`Full Rig · ${S.round} of ${PLAN.length}`;
     $('rigQ').innerHTML=`In the image, the pole weighs ${fmt(S.prob.W)} lbs and ${WORDS[S.prob.P]} parted blocks are in use.<br>Find the haul line, hook strain, the line out from SB1 and SB2, and the snatch block tension on each. (SB2 is the second snatch block out from the parted blocks.)`;
     buildRigSheet();drawRig(S.prob,{});setPhaseRig(1);return;
   }
@@ -817,7 +823,7 @@ function act(){
   if(S.mode==='rig'){
     if(S.phase<=3){
       const empty=RIGO[S.phase].filter(id=>!isFinite(val(id)));
-      if(empty.length){$('msg').textContent=S.phase===1?'Fill the friction, haul line and hook strain first.':S.phase===2?'Fill both line outs before the tensions.':'Fill both factors and both SBTs before you turn it in.';try{$(empty[0]).focus()}catch(e){}return}
+      if(empty.length){$('msg').textContent=S.phase===1?'Fill the haul line and hook strain first.':S.phase===2?'Fill both line outs before the tensions.':'Fill both SBTs before you turn it in.';try{$(empty[0]).focus()}catch(e){}return}
       if(S.phase<3)setPhaseRig(S.phase+1);else gradeRig();
     }else next();
     return;
@@ -858,7 +864,7 @@ $('btnAct').onclick=act;
 $('sheet').addEventListener('keydown',e=>{
   if(e.key!=='Enter'||!e.target.classList.contains('cell'))return;
   e.preventDefault();
-  const o=S.mode==='rig'?(RIGO[S.phase]||[]):order(),k=o.indexOf(e.target.id);
+  const o=S.mode==='rig'?(RIGIN[S.phase]||[]):order(),k=o.indexOf(e.target.id);
   if(k>=0&&k<o.length-1){try{$(o[k+1]).focus()}catch(_){}}
   else try{$('btnAct').focus()}catch(_){}
 });
