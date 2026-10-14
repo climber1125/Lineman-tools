@@ -196,6 +196,46 @@ h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4p
 #diag text.pn{fill:var(--accent);font-weight:600;font-size:12px}
 #diag text.hl{fill:var(--warn);font-weight:600}
 #diag text.hl.done{fill:var(--good)}
+.bench.book{background:#fbfbf8;border-color:#cfd3d8}
+.bench.book .benchHead{color:#5b616b}
+#diag text.bk-title{font-family:var(--body);font-weight:700;font-size:16px;fill:#1f2328}
+#diag .bk-shell{fill:#dde1e6;stroke:#2b2f36;stroke-width:2.5}
+#diag .bk-sheave{fill:#f4f5f7;stroke:#2b2f36;stroke-width:2}
+#diag .bk-hub{fill:#2b2f36}
+#diag .bk-hook{fill:none;stroke:#2b2f36;stroke-width:3}
+#diag .bk-hookline{stroke:#2b2f36;stroke-width:3.5}
+#diag .bk-beam{stroke:#6b717a;stroke-width:4}
+#diag .bk-rope{fill:none;stroke:#2b2f36;stroke-width:3.4;stroke-linecap:round}
+#diag .bk-becket{fill:#2b2f36}
+#diag .bk-head{fill:#2b2f36}
+#diag .bk-load{stroke:#2b2f36;stroke-width:1.5}
+#diag .bk-ground{stroke:#6b717a;stroke-width:2}
+#diag text.bk-loadt{font-family:var(--body);font-weight:600;font-size:17px;fill:#fff}
+#diag text.bk-fr{font-family:var(--body);font-size:12.5px;fill:#3b4048}
+#diag text.bk-hl{font-family:var(--body);font-weight:700;font-size:17px;fill:#1f2328}
+#diag text.bk-hl.done{fill:#15803d}
+#diag text.bk-sub{font-family:var(--body);font-size:14px;fill:#3b4048}
+#diag .bk-tag{fill:#fff;stroke:#15803d;stroke-width:1.2}
+#diag text.bk-ten{font-family:var(--mono);font-size:11.5px;font-weight:600;fill:#15803d}
+.hbox{border:2px solid #c98a4b;border-radius:6px;padding:16px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px}
+@media (max-width:700px){.hbox{grid-template-columns:minmax(0,1fr)}}
+.heq{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hlbl{font-family:var(--display);font-weight:700;font-size:1.25rem;white-space:nowrap}
+.frac{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.frac .num,.frac .den{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;justify-content:center}
+.frac .bar{align-self:stretch;height:2px;background:var(--fg);min-width:160px}
+.frac label,.ans{display:flex;flex-direction:column;gap:3px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.frac label sup{font-size:.7em;color:var(--accent)}
+.frac .op,.hrow .op{font-family:var(--mono);color:var(--muted);padding-bottom:10px}
+.cell.sm{width:110px;min-width:0}.cell.xs{width:80px;min-width:0}
+.frac .mirror{min-width:80px;text-align:center}
+.ans .cell{width:150px}
+.where{display:flex;flex-direction:column;gap:6px;font-size:.95rem;color:var(--muted);min-width:0}
+.where b{color:var(--fg);font-family:var(--display)}
+.where div{display:grid;grid-template-columns:44px 14px 1fr;gap:4px}
+.where div span:first-child{font-family:var(--mono);color:var(--fg)}
+.where p{margin:4px 0 0;font-size:.85rem}
 footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;margin:0 auto}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -254,7 +294,7 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
     </section>
 
     <section id="play" class="play" hidden>
-      <div class="bench">
+      <div class="bench" id="bench">
         <div class="benchHead"><span id="pTag">Problem 1</span><span id="pTimer"></span></div>
         <svg id="diag" role="img" aria-label="Rigging diagram"></svg>
       </div>
@@ -551,55 +591,86 @@ function makeHaul(P){
   return{haul:true,P,W,fr,pull:fr*W,hl:fr*W/P};
 }
 function drawHaul(p,o){
-  o=o||{};const show=!!o.show,P=p.P,el=[];
-  const cx=210,bw=Math.max(70,P*26+24),bx=cx-bw/2;
-  const uy=70,uh=34,ly=250,lh=34;
-  const xs=[];for(let i=0;i<P;i++)xs.push(P===1?cx+14:bx+18+i*((bw-36)/Math.max(1,P-1)));
-  // anchor + hook
-  el.push(`<line x1="${cx}" y1="14" x2="${cx}" y2="${uy}" class="sling"/>`);
-  el.push(`<line x1="${cx-40}" y1="14" x2="${cx+40}" y2="14" class="grd"/>`);
-  // upper block
-  el.push(`<rect x="${bx}" y="${uy}" width="${bw}" height="${uh}" rx="${P===1?17:8}" class="blockbox"/>`);
-  const ns=Math.max(1,Math.ceil(P/2));
-  for(let i=0;i<ns;i++){const x=bx+bw*(i+1)/(ns+1);el.push(`<circle cx="${x.toFixed(1)}" cy="${uy+uh/2}" r="4" class="hub"/>`)}
-  // haul line: leaves the upper block on the left, runs down to the winch
-  const hx0=bx+2,hy0=uy+uh/2,hx1=40,hy1=430;
-  el.push(`<line x1="${hx0}" y1="${hy0}" x2="${hx1}" y2="${hy1}" class="haul"/>`);
-  const d=norm(V(hx1-hx0,hy1-hy0)),pp=V(-d.y,d.x),tip=V(hx1,hy1),base=add(tip,mul(d,-16));
-  const pts=[tip,add(base,mul(pp,8)),add(base,mul(pp,-8))].map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ');
-  el.push(`<polygon points="${pts}" class="hhead"/>`);
-  el.push(`<text x="${hx1+6}" y="${hy1+22}" class="hl${show?' done':''}" text-anchor="start">${show?'Haul line '+fmt(p.hl)+' lbs':'Haul line = ?'}</text>`);
-  // parts supporting the load
-  const bot=P===1?ly+10:ly;
-  xs.forEach((x,i)=>{
-    el.push(`<line x1="${x.toFixed(1)}" y1="${uy+uh}" x2="${x.toFixed(1)}" y2="${bot}" class="part${show?' lit':''}"/>`);
-    if(show)el.push(`<text x="${(x+9).toFixed(1)}" y="${(uy+uh+ly)/2+(i%2?16:-8)}" class="pn" text-anchor="start">${i+1}</text>`);
-  });
-  // lower block (none for a single part: the rope hooks straight to the load)
-  let loadTop=ly+lh+30;
+  o=o||{};const show=!!o.show,P=p.P,el=[],sp=40,r=sp/2;
+  const x0=250-P*sp/2,X=k=>x0+k*sp;
+  const uy=118,ly=P>1?318:0,top=34;
+  const ups=[],lows=[];
+  for(let i=1;2*i-1<=P;i++)ups.push((X(2*i-2)+X(2*i-1))/2);
+  for(let j=1;2*j<=P;j++)lows.push((X(2*j-1)+X(2*j))/2);
+  const f=n=>n.toFixed(1),line=(x1,y1,x2,y2,c)=>el.push(`<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" class="${c}"/>`);
+  const txt=(x,y,t,c,an)=>el.push(`<text x="${f(x)}" y="${f(y)}" class="${c}" text-anchor="${an||'middle'}">${t}</text>`);
+  // title, like the book
+  txt(250,18,show?`${P} Part${P>1?'s':''} Supporting Load`:'How many parts support the load?','bk-title');
+  // upper block: shell, hook to anchor
+  const uL=X(0)-r-6,uR=Math.max(ups[ups.length-1]+r,P%2===0?X(P):-1e9)+r*(P%2===0?.4:0)+6;
+  el.push(`<rect x="${f(uL)}" y="${uy-r-9}" width="${f(uR-uL)}" height="${2*r+18}" rx="${r+9}" class="bk-shell"/>`);
+  const ucx=(uL+uR)/2;
+  line(ucx,uy-r-9,ucx,top+14,'bk-hookline');
+  el.push(`<circle cx="${f(ucx)}" cy="${top+8}" r="7" class="bk-hook"/>`);line(ucx-46,top,ucx+46,top,'bk-beam');
+  ups.forEach(x=>{el.push(`<circle cx="${f(x)}" cy="${uy}" r="${r-3}" class="bk-sheave"/><circle cx="${f(x)}" cy="${uy}" r="3.5" class="bk-hub"/>`)});
+  // lower block
+  let loadTop,lcx,lR=0;
   if(P>1){
-    el.push(`<rect x="${bx}" y="${ly}" width="${bw}" height="${lh}" rx="8" class="blockbox"/>`);
-    const nl=Math.max(1,Math.floor(P/2));
-    for(let i=0;i<nl;i++){const x=bx+bw*(i+1)/(nl+1);el.push(`<circle cx="${x.toFixed(1)}" cy="${ly+lh/2}" r="4" class="hub"/>`)}
-    el.push(`<line x1="${cx}" y1="${ly+lh}" x2="${cx}" y2="${loadTop}" class="sling"/>`);
-  }else{
-    loadTop=ly+10;
-    el.push(`<line x1="${xs[0]}" y1="${ly+10}" x2="${xs[0]}" y2="${loadTop}" class="sling"/>`);
+    const lL=lows[0]-r-6;lR=Math.max(lows[lows.length-1]+r,P%2===1?X(P)+r*.4:-1e9)+6;
+    el.push(`<rect x="${f(lL)}" y="${ly-r-9}" width="${f(lR-lL)}" height="${2*r+18}" rx="${r+9}" class="bk-shell"/>`);
+    lows.forEach(x=>{el.push(`<circle cx="${f(x)}" cy="${ly}" r="${r-3}" class="bk-sheave"/><circle cx="${f(x)}" cy="${ly}" r="3.5" class="bk-hub"/>`)});
+    lcx=(lL+lR)/2;loadTop=ly+r+58;
+    line(lcx,ly+r+9,lcx,loadTop,'bk-hookline');el.push(`<circle cx="${f(lcx)}" cy="${loadTop-8}" r="6" class="bk-hook"/>`);
+  }else{lcx=X(1);loadTop=uy+190}
+  // rope: over upper sheaves, under lower sheaves
+  ups.forEach((x,i)=>{const a=X(2*i),b=X(2*i+1);el.push(`<path d="M${f(a)} ${uy} A${r} ${r} 0 0 1 ${f(b)} ${uy}" class="bk-rope"/>`)});
+  lows.forEach((x,j)=>{const a=X(2*j+1),b=X(2*j+2);el.push(`<path d="M${f(a)} ${ly} A${r} ${r} 0 0 0 ${f(b)} ${ly}" class="bk-rope"/>`)});
+  const tens=k=>p.W/P*Math.pow(1.1,P-k);
+  for(let k=1;k<=P;k++){
+    let y1,y2;
+    if(P===1){y1=uy;y2=loadTop-10}
+    else if(k%2===1){y1=uy;y2=k===P?ly-r-9:ly}
+    else{y1=ly;y2=k===P?uy+r+9:uy}
+    line(X(k),y1,X(k),y2,'bk-rope');
+    if(k===P&&P>1)el.push(`<circle cx="${f(X(k))}" cy="${f(y2)}" r="4" class="bk-becket"/>`);
+    if(show){const ym=P===1?(uy+loadTop)/2:uy+(ly-uy)*(k%2?.38:.64);
+      el.push(`<rect x="${f(X(k)-25)}" y="${f(ym-11)}" width="50" height="17" rx="3" class="bk-tag"/>`);
+      txt(X(k),ym+2,fmt(tens(k)),'bk-ten');}
   }
-  const lw=130,lx=(P===1?xs[0]:cx)-lw/2;
-  el.push(`<rect x="${lx}" y="${loadTop}" width="${lw}" height="58" rx="3" class="loadbox"/>`);
-  el.push(`<text x="${lx+lw/2}" y="${loadTop+34}" class="loadt" text-anchor="middle">${fmt(p.W)} lbs</text>`);
-  el.push(`<text x="${cx+bw/2+12}" y="${(uy+uh+ly)/2+4}" text-anchor="start">${show?'P = '+P:'P = ?'}</text>`);
-  $('diag').setAttribute('viewBox','0 0 400 470');
+  if(P===1)el.push(`<circle cx="${f(X(1))}" cy="${loadTop-8}" r="6" class="bk-hook"/>`);
+  // +10% friction at every sheave
+  txt(uR+10,uy+5,`← +10% friction${ups.length>1?' each sheave':''}`,'bk-fr','start');
+  if(P>1)txt(lR+10,ly+5,`← +10% friction${lows.length>1?' each sheave':''}`,'bk-fr','start');
+  // load + ground
+  const lw=150,lx=lcx-lw/2;
+  el.push(`<defs><linearGradient id="bkg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa0a8"/><stop offset="1" stop-color="#2f3238"/></linearGradient></defs>`);
+  el.push(`<rect x="${f(lx)}" y="${loadTop}" width="${lw}" height="96" rx="2" fill="url(#bkg)" class="bk-load"/>`);
+  txt(lcx,loadTop+52,fmt(p.W)+' lbs','bk-loadt');
+  line(lx-14,loadTop+104,lx+lw+14,loadTop+104,'bk-ground');line(lx+20,loadTop+112,lx+lw-20,loadTop+112,'bk-ground');
+  // haul line: off the first upper sheave, down and away
+  const hy=loadTop+150,hx=Math.max(24,X(0)-200);
+  line(X(0),uy,hx,hy,'bk-rope');
+  const d=norm(V(hx-X(0),hy-uy)),pp=V(-d.y,d.x),tip=V(hx,hy),base=add(tip,mul(d,-16));
+  el.push(`<polygon points="${[tip,add(base,mul(pp,7)),add(base,mul(pp,-7))].map(q=>f(q.x)+','+f(q.y)).join(' ')}" class="bk-head"/>`);
+  txt(hx+4,hy+24,show?fmt(p.hl)+' lbs':'? lbs','bk-hl'+(show?' done':''),'start');
+  txt(hx+4,hy+42,'Haul line tension','bk-sub','start');
+  $('diag').setAttribute('viewBox',`0 0 540 ${f(hy+56)}`);
   $('diag').innerHTML=el.join('');
 }
 function buildHaulSheet(){
   const p=S.prob;
-  const inp=(id,lab)=>`<input class="cell" id="${id}" inputmode="decimal" autocomplete="off" aria-label="${lab}">`;
-  $('sheet').innerHTML=`<div class="sec s1"><div class="secHead">Haul line tension<small>Haul line = 1.1ᴾ × W ÷ P</small></div>
-  <div class="lrow"><span class="blk">Step 1</span><label>Parts supporting the load (P)${inp('c-hp','parts supporting load')}</label></div>
-  <div class="lrow"><span class="blk">Step 2</span><label>Friction 1.1ᴾ${inp('c-hf','friction 1.1 to the P')}</label><span class="op">×</span><label>Weight (W)<span class="mirror">${fmt(p.W)}</span></label><span class="op">=</span><label>1.1ᴾ × W${inp('c-hm','friction times weight')}</label></div>
-  <div class="lrow"><span class="blk">Step 3</span><label>1.1ᴾ × W<span class="mirror" id="hmir">—</span></label><span class="op">÷</span><label>P<span class="mirror" id="pmir">—</span></label><span class="op">=</span><label>Haul line${inp('c-hl','haul line tension')}</label></div></div>`;
+  const inp=(id,lab,c)=>`<input class="cell${c?' '+c:''}" id="${id}" inputmode="decimal" autocomplete="off" aria-label="${lab}">`;
+  $('sheet').innerHTML=`<div class="hbox">
+   <div class="heq">
+    <div class="hrow"><span class="hlbl">Haul line =</span>
+     <div class="frac"><div class="num"><label><span>1.1<sup id="pexp">P</sup></span>${inp('c-hf','friction 1.1 to the P','sm')}</label><span class="op">×</span><label>W<span class="mirror">${fmt(p.W)}</span></label></div>
+      <div class="bar"></div><div class="den"><label>P${inp('c-hp','parts supporting load','xs')}</label></div></div></div>
+    <div class="hrow"><span class="hlbl">=</span>
+     <div class="frac"><div class="num"><label>1.1ᴾ × W${inp('c-hm','friction times weight')}</label></div>
+      <div class="bar"></div><div class="den"><span class="mirror" id="pmir">P</span></div></div></div>
+    <div class="hrow"><span class="hlbl">=</span><label class="ans">Haul line tension${inp('c-hl','haul line tension')}</label><span class="op">lbs</span></div>
+   </div>
+   <div class="where"><b>Where:</b>
+    <div><span>W</span><span>=</span><span>Weight</span></div>
+    <div><span>P</span><span>=</span><span>Parts supporting load</span></div>
+    <div><span>1.1ᴾ</span><span>=</span><span>Friction, 10% per part</span></div>
+    <p>Count P first and write it on the bottom. The haul line itself is not a part.</p>
+   </div></div>`;
 }
 const HORDER=['c-hp','c-hf','c-hm','c-hl'];
 function setPhaseHaul(ph){
@@ -607,11 +678,11 @@ function setPhaseHaul(ph){
   $('sheet').className='sheet ph'+(ph===3?3:1);
   ['pass1','pass2','pass3'].forEach((id,k)=>{$(id).className='pass '+(ph===3?(k<2?'done':'on'):(k===0?'on':''))});
   if(ph===1){
-    $('instr').innerHTML=`<b>Count the parts</b> holding up the load. Don't count the haul line. Then friction is 1.1ᴾ, times the weight, divided by P.`;
+    $('instr').innerHTML=`<b>Count the parts</b> holding up the load and put P on the bottom. Then work the top: 1.1ᴾ × W. Divide, and that's the haul line tension.`;
     $('btnAct').textContent='Turn in my sheet';
     try{$(HORDER[0]).focus({preventScroll:true})}catch(e){}
   }else{
-    $('instr').innerHTML=`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. The diagram now numbers each part.`;
+    $('instr').innerHTML=`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. The diagram now shows the pull on every part, adding 10% at each sheave.`;
     $('btnAct').textContent=S.round>=PLAN.length?'See results →':'Next problem →';
     try{$('btnAct').focus({preventScroll:true})}catch(e){}
   }
@@ -675,6 +746,7 @@ function next(){
   S.round++;
   if(S.round>PLAN.length)return finish();
   $('report').hidden=true;S.pStart=Date.now();
+  $('bench').classList.toggle('book',S.mode==='haul');
   if(S.mode==='haul'){
     S.prob=makeHaul(PLAN[S.round-1]);
     $('pTag').textContent=`${MODES[S.mode].name} · ${S.round} of ${PLAN.length}`;
@@ -739,7 +811,7 @@ $('sheet').addEventListener('focusin',e=>{
 });
 $('sheet').addEventListener('input',e=>{
   $('msg').textContent='';
-  if(e.target.id==='c-hm'||e.target.id==='c-hp'){const v=val(e.target.id);$(e.target.id==='c-hm'?'hmir':'pmir').textContent=isFinite(v)?fmt(v):'—'}
+  if(e.target.id==='c-hp'){const v=val('c-hp');$('pmir').textContent=isFinite(v)?fmt(v):'P';$('pexp').textContent=isFinite(v)?fmt(v):'P'}
   const m=/^c-lo-(\d+)$/.exec(e.target.id||'');
   if(m){const t=$('lmir-'+(Number(m[1])+1));if(t){const v=val(e.target.id);t.textContent=isFinite(v)?fmt(v):'—'}}
 });
