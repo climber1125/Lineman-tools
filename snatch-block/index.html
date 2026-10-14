@@ -186,7 +186,7 @@ h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4p
 @media (max-width:560px){.calc{left:8px!important;right:8px!important;top:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important;width:auto}.calcHead{cursor:default}}
 
 .formula .fHl{display:none}
-.formula.haul .fSb{display:none}.formula.haul .fHl{display:inline}
+.formula.rig .fHl{display:inline}
 .formula.all .fHl{display:inline}
 #diag .blockbox{fill:var(--panel2);stroke:var(--rope);stroke-width:2.5}
 #diag .part{stroke:var(--rope);stroke-width:3;stroke-linecap:round}
@@ -236,6 +236,42 @@ h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4p
 .where div{display:grid;grid-template-columns:44px 14px 1fr;gap:4px}
 .where div span:first-child{font-family:var(--mono);color:var(--fg)}
 .where p{margin:4px 0 0;font-size:.85rem}
+.play.stack{grid-template-columns:minmax(0,1fr)}
+.bench.rig{background:#ffffff;border-color:#cfd3d8;color:#1f2328;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.6fr);grid-template-areas:"head head" "diag tbl" "form tbl" "q q";gap:6px 18px;padding:16px 18px}
+@media (max-width:760px){.bench.rig{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "diag" "form" "tbl" "q"}}
+.bench.rig .benchHead{grid-area:head;color:#5b616b}
+.bench.rig #diag{grid-area:diag;max-height:52vh}
+.rigTbl{grid-area:tbl;align-self:start;border:1px solid #9aa0a8;font-family:var(--body);font-size:.85rem;max-width:220px}
+.rigTbl .th{display:grid;grid-template-columns:1fr 1fr;background:#7a1f2b;color:#fff;font-weight:600;font-size:.72rem;text-align:center}
+.rigTbl .th span{padding:4px}
+.rigTbl .tr{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #9aa0a8}
+.rigTbl .tr>*{display:flex;align-items:center;justify-content:center;padding:4px}
+.rigTbl .tr>*+*{border-left:1px solid #9aa0a8;font-weight:700;font-size:1rem;color:#1f2328}
+.rigTbl svg{width:72px;height:44px}
+.rigTbl svg line{stroke:#2b2f36;stroke-width:2}.rigTbl svg circle{fill:#2b2f36}.rigTbl svg text{font-size:8px;fill:#2b2f36;font-family:var(--body)}
+.rigForm{grid-area:form;display:flex;flex-direction:column;gap:10px;font-family:var(--body);font-weight:700;font-size:1.25rem;color:#1f2328;padding:4px 0 0 8px}
+.rf{display:flex;align-items:center;gap:10px}
+.rf .fr{display:inline-flex;flex-direction:column;align-items:center;font-size:1.05rem}
+.rf .fr span:first-child{border-bottom:2px solid #1f2328;padding:0 4px}
+.rf sup{font-size:.6em}
+.rigQ{grid-area:q;margin:6px 0 0;font-size:1.15rem;line-height:1.5;color:#1f2328}
+#diag .tk-pole{fill:#c9a46a;stroke:#7a5c35;stroke-width:1.5}
+#diag .tk-log{stroke:#c9a46a;stroke-width:15;stroke-linecap:round}
+#diag .tk-logline{stroke:#7a5c35;stroke-width:1.2;opacity:.6}
+#diag .tk-rope{fill:none;stroke:#2b2f36;stroke-width:2.2;stroke-linecap:round}
+#diag .tk-part{stroke:#2b2f36;stroke-width:1.6}
+#diag .tk-blk{fill:#e3e6ea;stroke:#2b2f36;stroke-width:1.8}
+#diag .tk-hub{fill:#2b2f36}
+#diag .tk-arc{fill:none;stroke:#7a1f2b;stroke-width:1.6}
+#diag text.tk-ang{font-family:var(--body);font-size:13px;font-weight:700;fill:#7a1f2b}
+#diag text.tk-lbl{font-family:var(--body);font-size:13px;font-weight:700;fill:#1f2328}
+#diag text.tk-val{font-family:var(--mono);font-size:12px;font-weight:600;fill:#15803d;paint-order:stroke;stroke:#fff;stroke-width:4px}
+#diag text.tk-sub{font-family:var(--body);font-size:12px;fill:#3b4048}
+#diag .tk-head{fill:#2b2f36}
+.sheet.rp1 .s1,.sheet.rp2 .s2,.sheet.rp3 .s3{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.sheet.rp1 .s1 .secHead,.sheet.rp2 .s2 .secHead,.sheet.rp3 .s3 .secHead{color:var(--accent)}
+.sheet.rp2 .s1 .secHead,.sheet.rp3 .s1 .secHead,.sheet.rp3 .s2 .secHead,.sheet.rp4 .secHead{color:var(--muted)}
+.sheet.rp1 .s2 .lrow,.sheet.rp1 .s3 .lrow,.sheet.rp2 .s3 .lrow{opacity:.35}
 footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;margin:0 auto}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -260,6 +296,7 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
     <span class="fSb">Line Out = Line In × 1.1</span>
     <span class="fSb">SBT = Line Out × Angle Factor</span>
     <span class="fHl">Haul Line = 1.1ᴾ × W ÷ P</span>
+    <span class="fHl">Hook Strain = Haul Line + W</span>
   </div>
 
   <main>
@@ -269,9 +306,9 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
       <div class="menuGrid">
         <div class="modes">
           <button class="mode" type="button" data-mode="simple"><span class="k">2 problems · 1 block</span><b>Simple</b><p>Start here. One block. Get the line out first, then go back for the SBT.</p></button>
-          <button class="mode star" type="button" data-mode="test"><span class="k">5 problems · 2 to 3 blocks</span><b>Test Mode</b><p>Fill the whole organizer yourself. Graded when you turn it in, with notes on where the chain broke.</p></button>
+          <button class="mode" type="button" data-mode="test"><span class="k">5 problems · 2 to 3 blocks</span><b>Test Mode</b><p>Fill the whole organizer yourself. Graded when you turn it in, with notes on where the chain broke.</p></button>
           <button class="mode" type="button" data-mode="timed"><span class="k">5 problems · clock running</span><b>Timed Test</b><p>Same sheets, with a clock. Beat your best time without giving up accuracy.</p></button>
-          <button class="mode" type="button" data-mode="haul"><span class="k">5 problems · parted blocks</span><b>Haul Line</b><p>Count the parts holding the load, add friction, divide. How hard does the haul line pull?</p></button>
+          <button class="mode star" type="button" data-mode="rig"><span class="k">5 problems · full rig, like the test</span><b>Test Day</b><p>Pole, parted blocks, SB1 and SB2. Haul line and hook strain first, then line outs, then tensions.</p></button>
         </div>
         <div class="habit">
           <h2>On the test, draw this first</h2>
@@ -282,13 +319,13 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
             <li><b>Pass 2:</b> once all line outs are done, go back to Block 1. Factor, then SBT, for each block.</li>
           </ol>
           <div class="rule">SBT₂ uses LO₂. Same row, every time.</div>
-          <h2>Haul line: parted blocks</h2>
+          <h2>Test day: the full rig</h2>
           <ol>
-            <li><b>Count P:</b> the parts of rope holding up the load. The haul line itself does not count.</li>
-            <li><b>Friction:</b> 1.1ᴾ. That's 1.1 multiplied by itself P times, 10% for every part.</li>
-            <li><b>Pull:</b> 1.1ᴾ × W, then <b>÷ P</b>. That's the haul line tension.</li>
+            <li><b>Blocks first:</b> Haul line = 1.1ᴾ × W ÷ P. Hook strain = Haul line + W.</li>
+            <li><b>Line outs:</b> SB1's line in is the haul line. × 1.1 for LO₁, then × 1.1 again for LO₂.</li>
+            <li><b>Tensions:</b> back to SB1. Line out × angle factor, same row.</li>
           </ol>
-          <div class="rule">1,000 lbs on 2 parts: 1.21 × 1,000 ÷ 2 = 605 lbs</div>
+          <div class="rule">Hook strain stays at the top block. It doesn't go down the line.</div>
         </div>
       </div>
     </section>
@@ -297,6 +334,12 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
       <div class="bench" id="bench">
         <div class="benchHead"><span id="pTag">Problem 1</span><span id="pTimer"></span></div>
         <svg id="diag" role="img" aria-label="Rigging diagram"></svg>
+        <div id="rigTbl" class="rigTbl" hidden></div>
+        <div id="rigForm" class="rigForm" hidden>
+          <div class="rf"><span>Haul line =</span><span class="fr"><span>1.1<sup>P</sup> × W</span><span>P</span></span></div>
+          <div class="rf"><span>Hook strain = Haul Line + W</span></div>
+        </div>
+        <p id="rigQ" class="rigQ" hidden></p>
       </div>
       <div class="console">
         <div class="passes">
@@ -361,7 +404,7 @@ footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;marg
     </div>
   </aside>
 
-  <footer>Uses 10% friction per block and the standard rope-angle factor table. Haul line uses 1.1ᴾ × W ÷ P. Answers within 0.5% count, so rounding at each step is fine. A training game, not a rigging plan.</footer>
+  <footer>Uses 10% friction per block and the standard rope-angle factor table. Haul line uses 1.1ᴾ × W ÷ P; hook strain is haul line + W. Answers within 0.5% count, so rounding at each step is fine. A training game, not a rigging plan.</footer>
 </div>
 
 <script>
@@ -372,8 +415,8 @@ const FACS=[0,1,1.41,1.73,1.84,2];
 const angOf=f=>ANG.find(a=>Math.abs(F[a]-f)<.001);
 const SUB='₀₁₂₃₄₅';
 const sb=i=>SUB[i+1];
-const MODES={simple:{name:'Simple'},test:{name:'Test Mode'},timed:{name:'Timed Test'},haul:{name:'Haul Line'}};
-const PLANS={simple:[1,1],test:[2,2,3,3,3],timed:[2,2,3,3,3],haul:[1,2,3,4,5]};
+const MODES={simple:{name:'Simple'},test:{name:'Test Mode'},timed:{name:'Timed Test'},rig:{name:'Test Day'}};
+const PLANS={simple:[1,1],test:[2,2,3,3,3],timed:[2,2,3,3,3],rig:[1,1,1,1,1]};
 let PLAN=[];
 const $=id=>document.getElementById(id);
 const r1=x=>Math.round(x*10)/10;
@@ -579,152 +622,164 @@ function grade(){
   setPhase(3);hud();
 }
 
-/* ---------- haul line (parted blocks) ---------- */
-const nearR=(v,a)=>isFinite(v)&&Math.abs(v-a)<=Math.max(.006,Math.abs(a)*.005);
+/* ---------- test day: full rig ---------- */
+const WORDS=['','one','two','three','four','five','six'];
 const PASS0=['pass1','pass2','pass3'].map(id=>$(id).innerHTML);
-const PASSH=['Count parts<small>ropes holding the load</small>','Friction → ÷ P<small>1.1ᴾ × W ÷ P</small>','Graded<small>check your sheet</small>'];
-function setPassLabels(h){['pass1','pass2','pass3'].forEach((id,k)=>$(id).innerHTML=h?PASSH[k]:PASS0[k])}
-function makeHaul(P){
-  let W=Math.round(400+Math.random()*3600);
-  W=Math.random()<.75?Math.round(W/100)*100:Math.round(W/50)*50;
-  const fr=Math.pow(1.1,P);
-  return{haul:true,P,W,fr,pull:fr*W,hl:fr*W/P};
+const PASSR=['Pass 1 · Blocks<small>haul line, hook strain</small>','Pass 2 · Line outs<small>SB1, then SB2</small>','Pass 3 · Tensions<small>back to SB1</small>'];
+function setPassLabels(r){['pass1','pass2','pass3'].forEach((id,k)=>$(id).innerHTML=r?PASSR[k]:PASS0[k])}
+function makeRig(){
+  const P=pick([2,3,4,4,5]),W=Math.round(700+Math.random()*1900);
+  const t1=pick([45,60,90,90]),t2=pick([45,60,90,120]);
+  const fr=Math.pow(1.1,P),hl=fr*W/P,hs=hl+W,lo1=hl*1.1,lo2=lo1*1.1,af1=F[t1],af2=F[t2];
+  return{rig:true,P,W,t1,t2,fr,hl,hs,lo1,lo2,af1,af2,sbt1:lo1*af1,sbt2:lo2*af2};
 }
-function drawHaul(p,o){
-  o=o||{};const show=!!o.show,P=p.P,el=[],sp=40,r=sp/2;
-  const x0=250-P*sp/2,X=k=>x0+k*sp;
-  const uy=118,ly=P>1?318:0,top=34;
-  const ups=[],lows=[];
-  for(let i=1;2*i-1<=P;i++)ups.push((X(2*i-2)+X(2*i-1))/2);
-  for(let j=1;2*j<=P;j++)lows.push((X(2*j-1)+X(2*j))/2);
-  const f=n=>n.toFixed(1),line=(x1,y1,x2,y2,c)=>el.push(`<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" class="${c}"/>`);
-  const txt=(x,y,t,c,an)=>el.push(`<text x="${f(x)}" y="${f(y)}" class="${c}" text-anchor="${an||'middle'}">${t}</text>`);
-  // title, like the book
-  txt(250,18,show?`${P} Part${P>1?'s':''} Supporting Load`:'How many parts support the load?','bk-title');
-  // upper block: shell, hook to anchor
-  const uL=X(0)-r-6,uR=Math.max(ups[ups.length-1]+r,P%2===0?X(P):-1e9)+r*(P%2===0?.4:0)+6;
-  el.push(`<rect x="${f(uL)}" y="${uy-r-9}" width="${f(uR-uL)}" height="${2*r+18}" rx="${r+9}" class="bk-shell"/>`);
-  const ucx=(uL+uR)/2;
-  line(ucx,uy-r-9,ucx,top+14,'bk-hookline');
-  el.push(`<circle cx="${f(ucx)}" cy="${top+8}" r="7" class="bk-hook"/>`);line(ucx-46,top,ucx+46,top,'bk-beam');
-  ups.forEach(x=>{el.push(`<circle cx="${f(x)}" cy="${uy}" r="${r-3}" class="bk-sheave"/><circle cx="${f(x)}" cy="${uy}" r="3.5" class="bk-hub"/>`)});
-  // lower block
-  let loadTop,lcx,lR=0;
-  if(P>1){
-    const lL=lows[0]-r-6;lR=Math.max(lows[lows.length-1]+r,P%2===1?X(P)+r*.4:-1e9)+6;
-    el.push(`<rect x="${f(lL)}" y="${ly-r-9}" width="${f(lR-lL)}" height="${2*r+18}" rx="${r+9}" class="bk-shell"/>`);
-    lows.forEach(x=>{el.push(`<circle cx="${f(x)}" cy="${ly}" r="${r-3}" class="bk-sheave"/><circle cx="${f(x)}" cy="${ly}" r="3.5" class="bk-hub"/>`)});
-    lcx=(lL+lR)/2;loadTop=ly+r+58;
-    line(lcx,ly+r+9,lcx,loadTop,'bk-hookline');el.push(`<circle cx="${f(lcx)}" cy="${loadTop-8}" r="6" class="bk-hook"/>`);
-  }else{lcx=X(1);loadTop=uy+190}
-  // rope: over upper sheaves, under lower sheaves
-  ups.forEach((x,i)=>{const a=X(2*i),b=X(2*i+1);el.push(`<path d="M${f(a)} ${uy} A${r} ${r} 0 0 1 ${f(b)} ${uy}" class="bk-rope"/>`)});
-  lows.forEach((x,j)=>{const a=X(2*j+1),b=X(2*j+2);el.push(`<path d="M${f(a)} ${ly} A${r} ${r} 0 0 0 ${f(b)} ${ly}" class="bk-rope"/>`)});
-  const tens=k=>p.W/P*Math.pow(1.1,P-k);
-  for(let k=1;k<=P;k++){
-    let y1,y2;
-    if(P===1){y1=uy;y2=loadTop-10}
-    else if(k%2===1){y1=uy;y2=k===P?ly-r-9:ly}
-    else{y1=ly;y2=k===P?uy+r+9:uy}
-    line(X(k),y1,X(k),y2,'bk-rope');
-    if(k===P&&P>1)el.push(`<circle cx="${f(X(k))}" cy="${f(y2)}" r="4" class="bk-becket"/>`);
-    if(show){const ym=P===1?(uy+loadTop)/2:uy+(ly-uy)*(k%2?.38:.64);
-      el.push(`<rect x="${f(X(k)-25)}" y="${f(ym-11)}" width="50" height="17" rx="3" class="bk-tag"/>`);
-      txt(X(k),ym+2,fmt(tens(k)),'bk-ten');}
+function drawRig(p,o){
+  o=o||{};const show=!!o.show,el=[],pts=[],f=n=>n.toFixed(1);
+  const keep=(v,pad)=>{pad=pad||0;pts.push(V(v.x-pad,v.y-pad),V(v.x+pad,v.y+pad));return v};
+  const line=(a,b,c)=>{keep(a);keep(b);el.push(`<line x1="${f(a.x)}" y1="${f(a.y)}" x2="${f(b.x)}" y2="${f(b.y)}" class="${c}"/>`)};
+  const txt=(v,t,c,an)=>{const w=t.length*3.6;keep(V(v.x-(an==='start'?0:an==='end'?2*w:w),v.y-12));keep(V(v.x+(an==='end'?0:an==='start'?2*w:w),v.y+6));el.push(`<text x="${f(v.x)}" y="${f(v.y)}" class="${c}" text-anchor="${an||'middle'}">${t}</text>`)};
+  const G=360,gx=200;
+  // log (the pole being picked) and the gin pole standing through it
+  const L0=V(40,288),L1=V(430,318);
+  line(L0,L1,'tk-log');line(add(L0,V(10,-3)),add(L1,V(-10,-3)),'tk-logline');
+  keep(V(gx-6,40));keep(V(gx+6,G));
+  el.push(`<rect x="${gx-6}" y="40" width="12" height="${G-40}" rx="3" class="tk-pole"/>`);
+  // parted blocks: upper at the top of the gin pole, lower on the log
+  const U=V(gx+16,82),Lb=V(gx+40,236),ly=L0.y+(Lb.x-L0.x)*(L1.y-L0.y)/(L1.x-L0.x);
+  line(V(gx+6,60),V(U.x,U.y-14),'tk-rope');
+  line(V(Lb.x,Lb.y+14),V(Lb.x,ly-6),'tk-rope');
+  for(let i=0;i<p.P;i++){const d=(i-(p.P-1)/2)*4.5;line(V(U.x+d,U.y+14),V(Lb.x+d,Lb.y-14),'tk-part')}
+  [U,Lb].forEach(c=>{keep(c,16);el.push(`<rect x="${f(c.x-9)}" y="${f(c.y-15)}" width="18" height="30" rx="8" class="tk-blk"/><circle cx="${f(c.x)}" cy="${f(c.y)}" r="2.5" class="tk-hub"/>`)});
+  // haul line runs down the gin pole to SB1 at the butt
+  const S1=V(gx-16,G-30),hTop=V(U.x-9,U.y-2);
+  line(hTop,S1,'tk-rope');
+  const in1=norm(V(hTop.x-S1.x,hTop.y-S1.y)),out1=rot(in1,p.t1);
+  const S2=add(S1,mul(out1,240));
+  line(S1,S2,'tk-rope');
+  // SB2 on a stub post; pick the side that sends the line down toward the truck
+  const in2=neg(out1);const cA=rot(in2,p.t2),cB=rot(in2,-p.t2);
+  const sg=cA.y>=cB.y?1:-1,out2=sg>0?cA:cB,E=add(S2,mul(out2,135));
+  keep(V(S2.x+6,S2.y-50));keep(V(S2.x+18,S2.y+50));
+  el.unshift(`<rect x="${f(S2.x+6)}" y="${f(S2.y-50)}" width="12" height="100" rx="3" class="tk-pole"/>`);
+  line(S2,E,'tk-rope');
+  const base=add(E,mul(out2,-14)),pp=V(-out2.y,out2.x);
+  el.push(`<polygon points="${[E,add(base,mul(pp,6)),add(base,mul(pp,-6))].map(q=>f(q.x)+','+f(q.y)).join(' ')}" class="tk-head"/>`);
+  txt(add(E,mul(out2,22)),'to truck','tk-sub');
+  // snatch blocks, angle arcs, labels
+  [[S1,in1,out1,p.t1,1,'SB1',p.sbt1],[S2,in2,out2,p.t2,sg,'SB2',p.sbt2]].forEach(([S,a,b,th,sgn,name,sbt])=>{
+    const r=26,A=add(S,mul(a,r)),B=add(S,mul(b,r));
+    el.push(`<path d="M${f(A.x)} ${f(A.y)} A${r} ${r} 0 0 ${sgn>0?1:0} ${f(B.x)} ${f(B.y)}" class="tk-arc"/>`);
+    txt(add(S,mul(norm(add(a,b)),46)),th+'°','tk-ang');
+    const h=norm(neg(add(a,b)));
+    line(S,add(S,mul(h,14)),'tk-rope');
+    keep(S,12);el.push(`<circle cx="${f(S.x)}" cy="${f(S.y)}" r="9" class="tk-blk"/><circle cx="${f(S.x)}" cy="${f(S.y)}" r="2.5" class="tk-hub"/>`);
+    txt(add(S,mul(h,34)),name,'tk-lbl');
+    if(show)txt(add(S,mul(h,h.y<0?58:54)),'SBT '+fmt(sbt),'tk-val');
+  });
+  if(show){
+    const mid=(a,b)=>V((a.x+b.x)/2,(a.y+b.y)/2);
+    txt(add(mid(hTop,S1),V(-10,0)),'HL '+fmt(p.hl),'tk-val','end');
+    txt(add(mid(S1,S2),mul(V(-out1.y,out1.x),-16)),'LO₁ '+fmt(p.lo1),'tk-val');
+    txt(add(mid(S2,E),V(14,0)),'LO₂ '+fmt(p.lo2),'tk-val','start');
+    txt(V(U.x+16,U.y-18),'Hook strain '+fmt(p.hs),'tk-val','start');
   }
-  if(P===1)el.push(`<circle cx="${f(X(1))}" cy="${loadTop-8}" r="6" class="bk-hook"/>`);
-  // +10% friction at every sheave
-  txt(uR+10,uy+5,`← +10% friction${ups.length>1?' each sheave':''}`,'bk-fr','start');
-  if(P>1)txt(lR+10,ly+5,`← +10% friction${lows.length>1?' each sheave':''}`,'bk-fr','start');
-  // load + ground
-  const lw=150,lx=lcx-lw/2;
-  el.push(`<defs><linearGradient id="bkg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa0a8"/><stop offset="1" stop-color="#2f3238"/></linearGradient></defs>`);
-  el.push(`<rect x="${f(lx)}" y="${loadTop}" width="${lw}" height="96" rx="2" fill="url(#bkg)" class="bk-load"/>`);
-  txt(lcx,loadTop+52,fmt(p.W)+' lbs','bk-loadt');
-  line(lx-14,loadTop+104,lx+lw+14,loadTop+104,'bk-ground');line(lx+20,loadTop+112,lx+lw-20,loadTop+112,'bk-ground');
-  // haul line: off the first upper sheave, down and away
-  const hy=loadTop+150,hx=Math.max(24,X(0)-200);
-  line(X(0),uy,hx,hy,'bk-rope');
-  const d=norm(V(hx-X(0),hy-uy)),pp=V(-d.y,d.x),tip=V(hx,hy),base=add(tip,mul(d,-16));
-  el.push(`<polygon points="${[tip,add(base,mul(pp,7)),add(base,mul(pp,-7))].map(q=>f(q.x)+','+f(q.y)).join(' ')}" class="bk-head"/>`);
-  txt(hx+4,hy+24,show?fmt(p.hl)+' lbs':'? lbs','bk-hl'+(show?' done':''),'start');
-  txt(hx+4,hy+42,'Haul line tension','bk-sub','start');
-  $('diag').setAttribute('viewBox',`0 0 540 ${f(hy+56)}`);
+  const xs=pts.map(q=>q.x),ys=pts.map(q=>q.y),x0=Math.min(...xs)-14,y0=Math.min(...ys)-14,x1=Math.max(...xs)+14,y1=Math.max(...ys)+14;
+  $('diag').setAttribute('viewBox',`${f(x0)} ${f(y0)} ${f(x1-x0)} ${f(y1-y0)}`);
   $('diag').innerHTML=el.join('');
 }
-function buildHaulSheet(){
+function rigTable(){
+  const vv=th=>{
+    if(th===0)return `<svg viewBox="0 0 72 44"><line x1="33" y1="8" x2="33" y2="42"/><line x1="39" y1="8" x2="39" y2="42"/><circle cx="36" cy="8" r="4"/><text x="44" y="36">0°</text></svg>`;
+    if(th===180)return `<svg viewBox="0 0 72 44"><line x1="4" y1="14" x2="68" y2="14"/><circle cx="36" cy="10" r="4"/><text x="28" y="32">180°</text></svg>`;
+    const a=rad(th/2),Lg=32,y0=8,p1=[36-Lg*Math.sin(a),y0+Lg*Math.cos(a)],p2=[36+Lg*Math.sin(a),y0+Lg*Math.cos(a)];
+    return `<svg viewBox="0 0 72 44"><line x1="36" y1="${y0}" x2="${p1[0].toFixed(1)}" y2="${p1[1].toFixed(1)}"/><line x1="36" y1="${y0}" x2="${p2[0].toFixed(1)}" y2="${p2[1].toFixed(1)}"/><circle cx="36" cy="${y0}" r="4"/><text x="31" y="40">${th}°</text></svg>`;
+  };
+  $('rigTbl').innerHTML=`<div class="th"><span>Rope Angle</span><span>Angle Factor</span></div>`+ANG.map(a=>`<div class="tr"><div>${vv(a)}</div><div>${F[a]}</div></div>`).join('');
+}
+rigTable();
+function buildRigSheet(){
   const p=S.prob;
-  const inp=(id,lab,c)=>`<input class="cell${c?' '+c:''}" id="${id}" inputmode="decimal" autocomplete="off" aria-label="${lab}">`;
-  $('sheet').innerHTML=`<div class="hbox">
-   <div class="heq">
-    <div class="hrow"><span class="hlbl">Haul line =</span>
-     <div class="frac"><div class="num"><label><span>1.1<sup id="pexp">P</sup></span>${inp('c-hf','friction 1.1 to the P','sm')}</label><span class="op">×</span><label>W<span class="mirror">${fmt(p.W)}</span></label></div>
-      <div class="bar"></div><div class="den"><label>P${inp('c-hp','parts supporting load','xs')}</label></div></div></div>
-    <div class="hrow"><span class="hlbl">=</span>
-     <div class="frac"><div class="num"><label>1.1ᴾ × W${inp('c-hm','friction times weight')}</label></div>
-      <div class="bar"></div><div class="den"><span class="mirror" id="pmir">P</span></div></div></div>
-    <div class="hrow"><span class="hlbl">=</span><label class="ans">Haul line tension${inp('c-hl','haul line tension')}</label><span class="op">lbs</span></div>
-   </div>
-   <div class="where"><b>Where:</b>
-    <div><span>W</span><span>=</span><span>Weight</span></div>
-    <div><span>P</span><span>=</span><span>Parts supporting load</span></div>
-    <div><span>1.1ᴾ</span><span>=</span><span>Friction, 10% per part</span></div>
-    <p>Count P first and write it on the bottom. The haul line itself is not a part.</p>
-   </div></div>`;
+  const inp=(id,lab,c)=>`<input class="cell${c?' '+c:''}" id="${id}" inputmode="decimal" autocomplete="off" aria-label="${lab}" disabled>`;
+  const mir=id=>`<span class="mirror" id="${id}">—</span>`;
+  $('sheet').innerHTML=`
+  <div class="sec s1"><div class="secHead">Pass 1 · The blocks<small>P = ${p.P} · W = ${fmt(p.W)}</small></div>
+   <div class="lrow"><span class="blk">Haul</span><label>Friction 1.1ᴾ${inp('c-rf','friction 1.1 to the P','af')}</label><span class="op">× W ÷ P =</span><label>Haul line${inp('c-rhl','haul line')}</label></div>
+   <div class="lrow"><span class="blk">Hook</span><label>Haul line${mir('mhl1')}</label><span class="op">+ W =</span><label>Hook strain${inp('c-rhs','hook strain')}</label></div></div>
+  <div class="sec s2"><div class="secHead">Pass 2 · Line outs<small>Line out = Line in × 1.1</small></div>
+   <div class="lrow"><span class="blk">SB1</span><label>Line in = haul line${mir('mhl2')}</label><span class="op">× 1.1 =</span><label>LO₁${inp('c-rlo1','SB1 line out')}</label></div>
+   <div class="lrow"><span class="blk">SB2</span><label>LO₁ from above${mir('mlo1')}</label><span class="op">× 1.1 =</span><label>LO₂${inp('c-rlo2','SB2 line out')}</label></div></div>
+  <div class="sec s3"><div class="secHead">Pass 3 · Back to SB1 for SBTs<small>SBT = Line out × factor</small></div>
+   <div class="lrow"><span class="blk">SB1</span><label>LO₁${mir('mlo1b')}</label><span class="op">×</span><label>Factor <span class="ang">at ${p.t1}°</span>${inp('c-raf1','SB1 angle factor','af')}</label><span class="op">=</span><label>SBT₁${inp('c-rsb1','SB1 tension')}</label></div>
+   <div class="lrow"><span class="blk">SB2</span><label>LO₂${mir('mlo2')}</label><span class="op">×</span><label>Factor <span class="ang">at ${p.t2}°</span>${inp('c-raf2','SB2 angle factor','af')}</label><span class="op">=</span><label>SBT₂${inp('c-rsb2','SB2 tension')}</label></div></div>`;
 }
-const HORDER=['c-hp','c-hf','c-hm','c-hl'];
-function setPhaseHaul(ph){
-  S.phase=ph;
-  $('sheet').className='sheet ph'+(ph===3?3:1);
-  ['pass1','pass2','pass3'].forEach((id,k)=>{$(id).className='pass '+(ph===3?(k<2?'done':'on'):(k===0?'on':''))});
-  if(ph===1){
-    $('instr').innerHTML=`<b>Count the parts</b> holding up the load and put P on the bottom. Then work the top: 1.1ᴾ × W. Divide, and that's the haul line tension.`;
-    $('btnAct').textContent='Turn in my sheet';
-    try{$(HORDER[0]).focus({preventScroll:true})}catch(e){}
-  }else{
-    $('instr').innerHTML=`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. The diagram now shows the pull on every part, adding 10% at each sheave.`;
-    $('btnAct').textContent=S.round>=PLAN.length?'See results →':'Next problem →';
-    try{$('btnAct').focus({preventScroll:true})}catch(e){}
-  }
+const RIGO={1:['c-rf','c-rhl','c-rhs'],2:['c-rlo1','c-rlo2'],3:['c-raf1','c-rsb1','c-raf2','c-rsb2']};
+const rigMir=()=>{const sh=(id,src)=>{const v=val(src);$(id).textContent=isFinite(v)?fmt(v):'—'};sh('mhl1','c-rhl');sh('mhl2','c-rhl');sh('mlo1','c-rlo1');sh('mlo1b','c-rlo1');sh('mlo2','c-rlo2')};
+function setPhaseRig(ph){
+  S.phase=ph;$('sheet').className='sheet rp'+ph;rigMir();
+  [1,2,3].forEach(k=>RIGO[k].forEach(id=>{const e=$(id);if(ph===4)return;e.disabled=k!==ph;e.classList.toggle('locked',k<ph)}));
+  ['pass1','pass2','pass3'].forEach((id,k)=>{$(id).className='pass '+(k+1===ph?'on':k+1<ph?'done':'')});
+  const act=$('btnAct');
+  const I={1:`<b>Pass 1.</b> Work the blocks: haul line = 1.1ᴾ × W ÷ P, then hook strain = haul line + W.`,
+           2:`<b>Pass 2.</b> Line outs. SB1's line in is the haul line, not the hook strain. × 1.1, then × 1.1 again for SB2.`,
+           3:`<b>Pass 3.</b> Back to SB1. Pick the factor from the table, then SBT = that block's line out × factor.`,
+           4:`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. The picture now shows every number.`};
+  $('instr').innerHTML=I[ph];
+  act.textContent=ph===1?'Blocks done → line outs':ph===2?'Line outs done → tensions':ph===3?'Turn in my sheet':(S.round>=PLAN.length?'See results →':'Next problem →');
   $('msg').textContent='';
+  if(ph<4){try{$(RIGO[ph][0]).focus({preventScroll:true})}catch(e){}}else try{act.focus({preventScroll:true})}catch(e){}
 }
-function gradeHaul(){
-  const p=S.prob,u={};
-  HORDER.forEach(id=>u[id]=val(id));
-  const uP=u['c-hp'],uF=u['c-hf'],uM=u['c-hm'],uH=u['c-hl'];
-  const checks=[['c-hp',uP===p.P,String(p.P)],['c-hf',nearR(uF,p.fr),String(Number(p.fr.toFixed(4)))],['c-hm',near(uM,p.pull),fmt(p.pull)],['c-hl',near(uH,p.hl),fmt(p.hl)]];
+function gradeRig(){
+  const p=S.prob,u={};Object.values(RIGO).flat().forEach(id=>u[id]=val(id));
+  const T={'c-rf':p.fr,'c-rhl':p.hl,'c-rhs':p.hs,'c-rlo1':p.lo1,'c-rlo2':p.lo2,'c-raf1':p.af1,'c-rsb1':p.sbt1,'c-raf2':p.af2,'c-rsb2':p.sbt2};
+  const okF=(v,a)=>isFinite(v)&&Math.abs(v-a)<=Math.max(.006,Math.abs(a)*.005);
   let right=0;
-  checks.forEach(([id,ok,fix])=>{const e=$(id);e.disabled=true;e.classList.add(ok?'ok':'bad');if(ok)right++;else{const f=document.createElement('span');f.className='fix';f.textContent=fix;e.after(f)}});
-  const notes=[];
-  if(uP!==p.P){
-    if(uP===p.P+1)notes.push(`Parts: you counted the haul line. Only count the ${p.P} part${p.P>1?'s':''} holding the load.`);
-    else notes.push(`Parts: count every rope between the blocks that holds the load. This rig has ${p.P}.`);
+  Object.keys(T).forEach(id=>{const isF=id==='c-rf'||id.startsWith('c-raf');const ok=isF?okF(u[id],T[id]):near(u[id],T[id]);
+    const e=$(id);e.disabled=true;e.classList.remove('locked');e.classList.add(ok?'ok':'bad');if(ok)right++;
+    else{const s_=document.createElement('span');s_.className='fix';s_.textContent=isF?String(Number(T[id].toFixed(4))):fmt(T[id]);e.after(s_)}});
+  const N=[],W=p.W,P=p.P,uf=u['c-rf'],uh=u['c-rhl'],us=u['c-rhs'],l1=u['c-rlo1'],l2=u['c-rlo2'];
+  if(!okF(uf,p.fr)){
+    if(okF(uf,1.1*P))N.push(`Friction: 1.1ᴾ is 1.1 multiplied by itself ${P} times, not 1.1 × ${P}. On the calculator: 1.1 yˣ ${P} =.`);
+    else N.push(`Friction: 1.1^${P} = ${Number(p.fr.toFixed(4))}.`);
   }
-  const Pu=isFinite(uP)&&uP>0?uP:p.P;
-  if(!nearR(uF,p.fr)){
-    if(nearR(uF,1.1*Pu)&&Pu>1)notes.push(`Friction: 1.1ᴾ means 1.1 multiplied by itself ${Pu} times, not 1.1 × ${Pu}.`);
-    else if(nearR(uF,1.1)&&Pu>1)notes.push(`Friction: 10% for every part, so 1.1 to the power of ${Pu}, not just 1.1.`);
-    else if(nearR(uF,Math.pow(1.1,Pu)))notes.push(`Friction math is right for ${Pu} parts. It's off only because the part count was off.`);
-    else notes.push(`Friction: 1.1^${p.P} = ${Number(p.fr.toFixed(4))}. On the calculator: 1.1 yˣ ${p.P} =.`);
+  if(!near(uh,p.hl)){
+    if(near(uh,p.fr*W))N.push(`Haul line: you didn't divide by P (${P}).`);
+    else if(near(uh,W/P))N.push(`Haul line: that's W ÷ P with no friction. Multiply by 1.1ᴾ.`);
+    else if(isFinite(uf)&&near(uh,uf*W/P))N.push(`Haul line math is right. It's off only because the friction number was off.`);
+    else N.push(`Haul line: 1.1ᴾ × W ÷ P = ${fmt(p.hl)}.`);
   }
-  if(!near(uM,p.pull)){
-    if(near(uM,p.W))notes.push(`Step 2: friction is missing. Multiply the weight by 1.1ᴾ.`);
-    else if(isFinite(uF)&&near(uM,uF*p.W))notes.push(`Step 2 math is right. It's off only because the friction number was off.`);
-    else notes.push(`Step 2: your 1.1ᴾ × ${fmt(p.W)} = ${isFinite(uF)?fmt(uF*p.W):'?'}.`);
+  if(!near(us,p.hs)){
+    if(isFinite(uh)&&near(us,uh+W))N.push(`Hook strain math is right. It's off only because the haul line was off.`);
+    else if(near(us,W))N.push(`Hook strain: add the haul line to the weight.`);
+    else N.push(`Hook strain = haul line + W.`);
   }
-  if(!near(uH,p.hl)){
-    if(isFinite(uM)&&near(uH,uM)&&p.P>1)notes.push(`Step 3: you didn't divide by P. The parts share the load.`);
-    else if(near(uH,p.W/p.P))notes.push(`Step 3: that's W ÷ P with no friction. Friction always adds to the haul line.`);
-    else if(isFinite(uM)&&isFinite(uP)&&uP>0&&near(uH,uM/uP))notes.push(`Step 3 division is right. It's off only because a number above it was off.`);
-    else notes.push(`Step 3: your 1.1ᴾ × W ÷ P = ${isFinite(uM)&&Pu?fmt(uM/Pu):'?'}.`);
+  if(!near(l1,p.lo1)){
+    if(isFinite(us)&&near(l1,us*1.1))N.push(`SB1: you started from the hook strain. SB1's line in is the haul line.`);
+    else if(near(l1,W*1.1))N.push(`SB1: you started from the pole weight. SB1's line in is the haul line.`);
+    else if(isFinite(uh)&&near(l1,uh))N.push(`SB1: friction is missing. Line out = haul line × 1.1.`);
+    else if(isFinite(uh)&&near(l1,uh*1.1))N.push(`SB1 math is right. It's off only because the haul line was off.`);
+    else N.push(`SB1: line out = haul line × 1.1.`);
   }
-  const clean=right===4,pts=right*25+(clean?100:0);
-  S.score+=pts;S.right+=right;S.cells+=4;if(clean)S.clean++;
+  if(!near(l2,p.lo2)){
+    if(isFinite(l1)&&near(l2,l1))N.push(`SB2: friction is missing. LO₂ = LO₁ × 1.1.`);
+    else if(isFinite(uh)&&near(l2,uh*1.1))N.push(`SB2: you started from the haul line again. SB2 starts from LO₁.`);
+    else if(isFinite(l1)&&near(l2,l1*1.1))N.push(`SB2 math is right. It's off only because LO₁ was off.`);
+    else N.push(`SB2: LO₂ = LO₁ × 1.1.`);
+  }
+  [[1,p.t1,p.af1,'c-raf1','c-rsb1',l1,'LO₁',l2,'LO₂'],[2,p.t2,p.af2,'c-raf2','c-rsb2',l2,'LO₂',l1,'LO₁']].forEach(([n,th,af,fi,si,lo,lon,oth,othn])=>{
+    const ua=u[fi],us_=u[si];
+    if(!okF(ua,af))N.push(`SB${n}: ${th}° is factor ${af}${isFinite(ua)&&angOf(ua)!==undefined?`, not ${ua} (that's ${angOf(ua)}°)`:''}.`);
+    if(!near(us_,n===1?p.sbt1:p.sbt2)){
+      if(isFinite(oth)&&isFinite(ua)&&near(us_,oth*ua))N.push(`SBT${n}: you used ${othn}. SBT${n} uses ${lon}, same row.`);
+      else if(isFinite(lo)&&isFinite(ua)&&near(us_,lo*ua))N.push(`SBT${n} math is right. It's off only because the line out or factor was off.`);
+      else N.push(`SBT${n} = ${lon} × factor.`);
+    }
+  });
+  const clean=right===9,pts=right*15+(clean?150:0);
+  S.score+=pts;S.right+=right;S.cells+=9;if(clean)S.clean++;
   const rep=$('report');rep.hidden=false;
-  const ma=`${fmt(p.W)} lbs on ${p.P} part${p.P>1?'s':''} takes ${fmt(p.hl)} lbs on the haul line.`;
-  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>${ma}${p.P===1?' One part means no mechanical advantage: friction makes it harder than the weight itself.':''}</div>`}
-  else{rep.className='report issues';rep.innerHTML=`<b class="head">${right} of 4 cells right · +${pts}</b><ul>${notes.slice(0,5).map(t=>`<li>${t}</li>`).join('')}</ul><div>${ma}</div>`}
-  drawHaul(p,{show:true});setPhaseHaul(3);hud();
+  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>Haul line, hook strain, both line outs, both factors and both SBTs are right. That's a test-day answer.</div>`}
+  else{rep.className='report issues';rep.innerHTML=`<b class="head">${right} of 9 cells right · +${pts}</b><ul>${[...new Set(N)].slice(0,6).map(t=>`<li>${t}</li>`).join('')}</ul><div>Correct values are shown under each cell in green.</div>`}
+  drawRig(p,{show:true});setPhaseRig(4);hud();
 }
 
 /* ---------- flow ---------- */
@@ -735,9 +790,11 @@ function start(mode){
   clearInterval(S.timer);
   S={mode,score:0,clean:0,right:0,cells:0,round:0,prob:null,phase:1,t0:Date.now(),pStart:Date.now(),timer:null};
   PLAN=PLANS[mode];
-  if(mode==='haul')PLAN=PLAN.slice().sort(()=>Math.random()-.5);
-  setPassLabels(mode==='haul');
-  $('fBar').className='formula'+(mode==='haul'?' haul':'');
+  setPassLabels(mode==='rig');
+  $('fBar').className='formula'+(mode==='rig'?' rig':'');
+  $('play').classList.toggle('stack',mode==='rig');
+  $('bench').classList.toggle('rig',mode==='rig');
+  ['rigTbl','rigForm','rigQ'].forEach(id=>$(id).hidden=mode!=='rig');
   show('play');hud();
   if(mode==='timed'){S.timer=setInterval(()=>{$('pTimer').textContent=clock(Date.now()-S.t0)},250)}else $('pTimer').textContent='';
   next();
@@ -746,22 +803,22 @@ function next(){
   S.round++;
   if(S.round>PLAN.length)return finish();
   $('report').hidden=true;S.pStart=Date.now();
-  $('bench').classList.toggle('book',S.mode==='haul');
-  if(S.mode==='haul'){
-    S.prob=makeHaul(PLAN[S.round-1]);
-    $('pTag').textContent=`${MODES[S.mode].name} · ${S.round} of ${PLAN.length}`;
-    buildHaulSheet();drawHaul(S.prob,{});setPhaseHaul(1);return;
+  if(S.mode==='rig'){
+    S.prob=makeRig();
+    $('pTag').textContent=`Preview question · ${S.round} of ${PLAN.length}`;
+    $('rigQ').innerHTML=`In the image, the pole weighs ${fmt(S.prob.W)} lbs and ${WORDS[S.prob.P]} parted blocks are in use.<br>Find the haul line, hook strain, the line out from SB1 and SB2, and the snatch block tension on each. (SB2 is the second snatch block out from the parted blocks.)`;
+    buildRigSheet();drawRig(S.prob,{});setPhaseRig(1);return;
   }
   S.prob=makeProblem(PLAN[S.round-1]);
   $('pTag').textContent=`${MODES[S.mode].name} · ${S.round} of ${PLAN.length} · ${S.prob.n} block${S.prob.n>1?'s':''}`;
   buildSheet();draw(S.prob,{});setPhase(1);
 }
 function act(){
-  if(S.mode==='haul'){
-    if(S.phase===1){
-      const empty=HORDER.filter(id=>!isFinite(val(id)));
-      if(empty.length){$('msg').textContent='Fill all four boxes before you turn it in.';try{$(empty[0]).focus()}catch(e){}return}
-      gradeHaul();
+  if(S.mode==='rig'){
+    if(S.phase<=3){
+      const empty=RIGO[S.phase].filter(id=>!isFinite(val(id)));
+      if(empty.length){$('msg').textContent=S.phase===1?'Fill the friction, haul line and hook strain first.':S.phase===2?'Fill both line outs before the tensions.':'Fill both factors and both SBTs before you turn it in.';try{$(empty[0]).focus()}catch(e){}return}
+      if(S.phase<3)setPhaseRig(S.phase+1);else gradeRig();
     }else next();
     return;
   }
@@ -801,22 +858,22 @@ $('btnAct').onclick=act;
 $('sheet').addEventListener('keydown',e=>{
   if(e.key!=='Enter'||!e.target.classList.contains('cell'))return;
   e.preventDefault();
-  const o=S.mode==='haul'?HORDER:order(),k=o.indexOf(e.target.id);
+  const o=S.mode==='rig'?(RIGO[S.phase]||[]):order(),k=o.indexOf(e.target.id);
   if(k>=0&&k<o.length-1){try{$(o[k+1]).focus()}catch(_){}}
   else try{$('btnAct').focus()}catch(_){}
 });
 $('sheet').addEventListener('focusin',e=>{
-  const tr=e.target.closest('[data-row]');if(!tr||S.phase===3||S.mode==='haul')return;
+  const tr=e.target.closest('[data-row]');if(!tr||S.phase===3||S.mode==='rig')return;
   draw(S.prob,{focus:Number(tr.dataset.row)});
 });
 $('sheet').addEventListener('input',e=>{
   $('msg').textContent='';
-  if(e.target.id==='c-hp'){const v=val('c-hp');$('pmir').textContent=isFinite(v)?fmt(v):'P';$('pexp').textContent=isFinite(v)?fmt(v):'P'}
+  if(S.mode==='rig')rigMir();
   const m=/^c-lo-(\d+)$/.exec(e.target.id||'');
   if(m){const t=$('lmir-'+(Number(m[1])+1));if(t){const v=val(e.target.id);t.textContent=isFinite(v)?fmt(v):'—'}}
 });
 $('btnAgain').onclick=()=>start(S.mode);
-const toMenu=()=>{clearInterval(S.timer);show('menu');S={mode:null};$('fBar').className='formula all';hud()};
+const toMenu=()=>{clearInterval(S.timer);show('menu');S={mode:null};$('fBar').className='formula all';$('play').classList.remove('stack');$('bench').classList.remove('rig');hud()};
 $('btnMenu').onclick=toMenu;$('btnMenu2').onclick=toMenu;
 
 /* ---------- angle table ---------- */
