@@ -1,0 +1,824 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Snatch Block Showdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: rigging diagram left, blank test organizer right; stacks on phones. Single dark look by choice: projector-friendly. */
+:root{
+  --bg:#060a13; --panel:#0d1524; --panel2:#121e33; --line:#223250; --fg:#eef2f7; --muted:#8c9cb5; --dim:#4a5a75;
+  --accent:#38bdf8; --accent-ink:#04121d; --good:#4ade80; --warn:#fbbf24; --rope:#d5dde8;
+  --display:'Chakra Petch','Arial Narrow',system-ui,sans-serif;
+  --body:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:17px;line-height:1.45}
+.app{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:14px 28px;display:flex;flex-direction:column;gap:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:44px;height:44px;border:2px solid var(--accent);border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;color:var(--accent);letter-spacing:.04em}
+.brand b{font-family:var(--display);font-size:1.35rem;letter-spacing:.02em;display:block;line-height:1.1}
+.brand small{color:var(--muted);font-size:.85rem;letter-spacing:.06em;text-transform:uppercase}
+.hud{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 12px;min-width:76px;text-align:center}
+.stat span{display:block;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:1.15rem;font-variant-numeric:tabular-nums}
+.stat.hot b{color:var(--accent)}
+.tbtn{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.9rem;color:var(--muted)}
+.tbtn:hover{color:var(--fg);border-color:var(--muted)}
+
+.formula{display:flex;flex-wrap:wrap;gap:6px 22px;justify-content:center;font-family:var(--mono);font-size:clamp(.85rem,2vw,1.05rem);color:var(--accent);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.formula span{white-space:nowrap}
+
+h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4px;text-wrap:balance;letter-spacing:.01em}
+.lede{color:var(--muted);margin:0 0 16px;max-width:64ch}
+.menuGrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.menuGrid{grid-template-columns:minmax(0,1fr)}}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.mode{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s,transform .15s}
+.mode:hover{border-color:var(--accent);transform:translateY(-2px)}
+.mode.star{border-color:var(--accent)}
+.mode .k{font-family:var(--mono);font-size:.75rem;color:var(--accent);letter-spacing:.1em;text-transform:uppercase}
+.mode b{font-family:var(--display);font-size:1.45rem}
+.mode p{margin:0;color:var(--muted);font-size:.95rem}
+.habit{background:var(--panel2);border:1px dashed var(--accent);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.habit h2{font-family:var(--display);margin:0;font-size:1.3rem}
+.habit ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+.habit li::marker{color:var(--accent);font-family:var(--mono);font-weight:600}
+.habit .rule{font-family:var(--mono);color:var(--accent);font-size:.95rem}
+
+.play{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:14px;align-items:start}
+@media (max-width:980px){.play{grid-template-columns:minmax(0,1fr)}}
+.bench{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.benchHead{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:.85rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+#pTimer{color:var(--accent);font-size:1.1rem;font-variant-numeric:tabular-nums}
+#diag{width:100%;height:auto;max-height:62vh;display:block;margin-top:6px}
+#diag .rope{stroke:var(--rope);stroke-width:3;stroke-linecap:round}
+#diag .rope.hot{stroke:var(--accent);stroke-width:5}
+#diag .sling{stroke:var(--muted);stroke-width:3;stroke-dasharray:4 3}
+#diag .eye{fill:var(--bg);stroke:var(--muted);stroke-width:2.5}
+#diag .sheave{fill:var(--panel2);stroke:var(--rope);stroke-width:2.5}
+#diag .hub{fill:var(--rope)}
+#diag .sheave.on{stroke:var(--accent);stroke-width:3.5}
+#diag .arc{fill:none;stroke:var(--muted);stroke-width:2}
+#diag .arc.on{stroke:var(--accent);stroke-width:3}
+#diag text{font-family:var(--mono);font-size:13px;fill:var(--muted)}
+#diag text.ang{font-size:15px;font-weight:600;fill:var(--fg)}
+#diag text.ang.on{fill:var(--accent)}
+#diag text.sbt{font-family:var(--display);font-size:15px;font-weight:700;fill:var(--fg)}
+#diag text.sbt.on{fill:var(--accent)}
+#diag text.sbt.done{fill:var(--good)}
+#diag text.ten{fill:var(--muted);font-weight:600}
+#diag text.ten.done{fill:var(--good)}
+#diag text.ten.on{fill:var(--accent)}
+#diag .loadbox{fill:#2b3446;stroke:var(--muted);stroke-width:2}
+#diag text.loadt{fill:var(--fg);font-size:15px;font-weight:600}
+#diag .head{fill:var(--rope)}
+#diag .grd{stroke:var(--muted);stroke-width:2}
+
+.console{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.passes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pass{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-family:var(--display);font-weight:700;letter-spacing:.03em;color:var(--dim);line-height:1.15}
+.pass small{display:block;font-family:var(--body);font-weight:500;font-size:.8rem;letter-spacing:0}
+.pass.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.pass.done{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--line))}
+.instr{margin:0;color:var(--fg);font-size:1.02rem}
+.instr b{color:var(--accent)}
+
+.sheetWrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+#sheet{width:100%;border-collapse:collapse;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.95rem;min-width:560px}
+#sheet th{font-family:var(--body);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:bottom;font-weight:600}
+#sheet th small{display:block;font-family:var(--mono);text-transform:none;letter-spacing:0;font-size:.7rem;color:var(--dim);font-weight:500}
+#sheet .p1{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+#sheet.ph2 .p1,#sheet.ph3 .p1{background:transparent}
+#sheet.ph2 .p2{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+#sheet th.lin,#sheet td.lin{border-left:2px solid var(--line)}
+#sheet th.ang,#sheet td.ang{border-left:2px solid var(--line)}
+#sheet td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+#sheet tr:last-child td{border-bottom:0}
+#sheet td.blk{font-family:var(--display);font-weight:700;font-size:1.1rem;padding-top:14px}
+#sheet td.ang{padding-top:14px;white-space:nowrap;font-weight:600}
+#sheet.ph1 td.ang{color:var(--dim)}
+.sheet{display:flex;flex-direction:column;gap:10px}
+.sec{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.secHead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;font-family:var(--display);font-weight:700;font-size:1.05rem;letter-spacing:.03em;color:var(--dim)}
+.secHead small{font-family:var(--mono);font-weight:500;font-size:.8rem;letter-spacing:0}
+.secNote{font-size:.85rem;color:var(--dim)}
+.sheet.ph1 .s1,.sheet.ph2 .s2{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.sheet.ph1 .s1 .secHead,.sheet.ph2 .s2 .secHead{color:var(--accent)}
+.sheet.ph2 .s1 .secHead,.sheet.ph3 .secHead{color:var(--muted)}
+.sheet.ph1 .s2 .lrow{opacity:.35}
+.sheet:not(.ph1) .secNote{display:none}
+.lrow{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 10px;padding-top:8px;border-top:1px solid var(--line)}
+.lrow:first-of-type{border-top:0;padding-top:0}
+.lrow .blk{font-family:var(--display);font-weight:700;font-size:1.05rem;min-width:66px;padding-bottom:10px}
+.lrow label{display:flex;flex-direction:column;gap:3px;flex:1 1 110px;min-width:0;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.lrow label .ang{color:var(--fg);letter-spacing:0;text-transform:none;font-family:var(--mono)}
+.sheet.ph1 .lrow label .ang{visibility:hidden}
+.lrow .op{font-family:var(--mono);color:var(--muted);padding-bottom:10px;white-space:nowrap}
+.mirror{display:block;font-family:var(--mono);font-size:1.05rem;padding:9px 8px;border:2px dashed var(--line);border-radius:8px;color:var(--fg);text-transform:none;letter-spacing:0;font-variant-numeric:tabular-nums;font-weight:500}
+.cell{width:100%;min-width:84px;background:var(--bg);border:2px solid var(--line);border-radius:8px;color:var(--fg);font-family:var(--mono);font-size:1.05rem;padding:8px;font-variant-numeric:tabular-nums}
+.cell.af{min-width:64px}
+.cell:focus{border-color:var(--accent);outline:none}
+.cell:disabled{opacity:.35;cursor:not-allowed}
+.cell.locked{opacity:1;border-style:dashed;color:var(--fg);cursor:default}
+.cell.ok{border-color:var(--good);color:var(--good);opacity:1;border-style:solid}
+.cell.bad{border-color:var(--warn);color:var(--warn);opacity:1;border-style:solid;text-decoration:line-through}
+.fix{display:block;margin-top:4px;font-size:.85rem;color:var(--good);font-weight:600}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.go{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:0 22px;font-family:var(--display);font-weight:700;font-size:1.1rem;letter-spacing:.04em;min-height:52px}
+.go:hover{filter:brightness(1.1)}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:10px;padding:0 18px;min-height:52px;font-weight:600}
+.msg{color:var(--warn);font-weight:500}
+.msg:empty{display:none}
+.report{border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.report.clean{background:color-mix(in srgb,var(--good) 10%,transparent);border-left:3px solid var(--good)}
+.report.issues{background:color-mix(in srgb,var(--warn) 9%,transparent);border-left:3px solid var(--warn)}
+.report b.head{font-family:var(--display);font-size:1.15rem}
+.report.clean b.head{color:var(--good)}
+.report.issues b.head{color:var(--warn)}
+.report ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+
+.summary{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:14px;max-width:640px}
+.sumGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.sumGrid div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
+.sumGrid span{display:block;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.sumGrid b{font-family:var(--mono);font-size:1.6rem}
+.newbest{color:var(--accent);font-family:var(--display);font-weight:700;letter-spacing:.06em}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+
+.table{position:fixed;right:16px;top:calc(env(safe-area-inset-top,0px) + 80px);width:min(300px,calc(100% - 32px));background:var(--panel2);border:1px solid var(--accent);border-radius:12px;padding:14px;z-index:5;box-shadow:0 18px 40px rgba(0,0,0,.5)}
+.table header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.table header b{font-family:var(--display);font-size:1.1rem}
+.trow{display:grid;grid-template-columns:62px 1fr auto;align-items:center;gap:10px;padding:4px 0;border-top:1px solid var(--line);font-family:var(--mono)}
+.trow svg{width:60px;height:40px}
+.trow svg line{stroke:var(--rope);stroke-width:2.5}
+.trow svg circle{fill:var(--accent)}
+.trow b{font-size:1.25rem;color:var(--accent)}
+.tnote{margin:8px 0 0;font-size:.85rem;color:var(--muted)}
+
+.calc{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);width:272px;background:var(--panel2);border:1px solid var(--accent);border-radius:14px;z-index:6;box-shadow:0 18px 44px rgba(0,0,0,.55);display:flex;flex-direction:column;touch-action:none}
+.calcHead{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px 8px 14px;cursor:grab;border-bottom:1px solid var(--line);user-select:none}
+.calcHead:active{cursor:grabbing}
+.calcHead b{font-family:var(--display);font-size:1rem;letter-spacing:.04em}
+.calcHead small{color:var(--dim);font-size:.75rem;margin-left:6px}
+.calcBody{padding:10px;display:flex;flex-direction:column;gap:8px}
+.tape{font-family:var(--mono);font-size:.78rem;color:var(--muted);min-height:3.6em;max-height:5.6em;overflow-y:auto;display:flex;flex-direction:column;justify-content:flex-end;font-variant-numeric:tabular-nums}
+.tape div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.screen{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.screen .pend{display:block;font-size:.8rem;color:var(--dim);min-height:1.2em}
+.screen .val{display:block;font-size:1.7rem;font-weight:600;overflow-x:auto;white-space:nowrap}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.key{background:var(--bg);border:1px solid var(--line);border-radius:8px;min-height:46px;font-family:var(--mono);font-size:1.15rem;font-weight:600}
+.key:hover{border-color:var(--muted)}
+.key:active{transform:translateY(1px)}
+.key.op{color:var(--accent)}
+.key.fn{color:var(--muted);font-size:.95rem}
+.key.eq{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.key.wide{grid-column:span 2}
+@media (max-width:560px){.calc{left:8px!important;right:8px!important;top:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important;width:auto}.calcHead{cursor:default}}
+
+.formula .fHl{display:none}
+.formula.haul .fSb{display:none}.formula.haul .fHl{display:inline}
+.formula.all .fHl{display:inline}
+#diag .blockbox{fill:var(--panel2);stroke:var(--rope);stroke-width:2.5}
+#diag .part{stroke:var(--rope);stroke-width:3;stroke-linecap:round}
+#diag .part.lit{stroke:var(--accent);stroke-width:4}
+#diag .haul{stroke:var(--warn);stroke-width:3.5;stroke-linecap:round}
+#diag .hhead{fill:var(--warn)}
+#diag text.pn{fill:var(--accent);font-weight:600;font-size:12px}
+#diag text.hl{fill:var(--warn);font-weight:600}
+#diag text.hl.done{fill:var(--good)}
+footer{color:var(--muted);font-size:.82rem;text-align:center;max-width:72ch;margin:0 auto}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">SB</span>
+      <div><b>Snatch Block Showdown</b><small>Line outs first · tensions second</small></div>
+    </div>
+    <div class="hud">
+      <div class="stat"><span>Score</span><b id="hScore">0</b></div>
+      <div class="stat hot"><span>Clean sheets</span><b id="hStreak">0</b></div>
+      <div class="stat"><span>Best</span><b id="hBest">–</b></div>
+      <button class="tbtn" id="btnCalc" type="button" aria-expanded="false">Calculator</button>
+      <button class="tbtn" id="btnTable" type="button" aria-expanded="false">Angle table</button>
+      <button class="tbtn" id="btnMenu" type="button" hidden>Change mode</button>
+    </div>
+  </header>
+
+  <div class="formula all" id="fBar" aria-label="Formulas">
+    <span class="fSb">Line Out = Line In × 1.1</span>
+    <span class="fSb">SBT = Line Out × Angle Factor</span>
+    <span class="fHl">Haul Line = 1.1ᴾ × W ÷ P</span>
+  </div>
+
+  <main>
+    <section id="menu">
+      <h1>Work it like the test</h1>
+      <p class="lede">You get the rigging picture and a blank organizer. Nothing gets filled in for you. Carry your own numbers down the line out column, lock it in, then go back to Block 1 for the tensions. Your sheet gets graded at the end.</p>
+      <div class="menuGrid">
+        <div class="modes">
+          <button class="mode" type="button" data-mode="simple"><span class="k">2 problems · 1 block</span><b>Simple</b><p>Start here. One block. Get the line out first, then go back for the SBT.</p></button>
+          <button class="mode star" type="button" data-mode="test"><span class="k">5 problems · 2 to 3 blocks</span><b>Test Mode</b><p>Fill the whole organizer yourself. Graded when you turn it in, with notes on where the chain broke.</p></button>
+          <button class="mode" type="button" data-mode="timed"><span class="k">5 problems · clock running</span><b>Timed Test</b><p>Same sheets, with a clock. Beat your best time without giving up accuracy.</p></button>
+          <button class="mode" type="button" data-mode="haul"><span class="k">5 problems · parted blocks</span><b>Haul Line</b><p>Count the parts holding the load, add friction, divide. How hard does the haul line pull?</p></button>
+        </div>
+        <div class="habit">
+          <h2>On the test, draw this first</h2>
+          <ol>
+            <li>Number the blocks from the load out. Block 1 holds the load.</li>
+            <li>Write two lists: <b>Line outs</b> on top, <b>SBTs</b> underneath.</li>
+            <li><b>Pass 1:</b> get every line out. Block 1: the load × 1.1. Every block after that: the line out above × 1.1. No SBTs yet.</li>
+            <li><b>Pass 2:</b> once all line outs are done, go back to Block 1. Factor, then SBT, for each block.</li>
+          </ol>
+          <div class="rule">SBT₂ uses LO₂. Same row, every time.</div>
+          <h2>Haul line: parted blocks</h2>
+          <ol>
+            <li><b>Count P:</b> the parts of rope holding up the load. The haul line itself does not count.</li>
+            <li><b>Friction:</b> 1.1ᴾ. That's 1.1 multiplied by itself P times, 10% for every part.</li>
+            <li><b>Pull:</b> 1.1ᴾ × W, then <b>÷ P</b>. That's the haul line tension.</li>
+          </ol>
+          <div class="rule">1,000 lbs on 2 parts: 1.21 × 1,000 ÷ 2 = 605 lbs</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="play" class="play" hidden>
+      <div class="bench">
+        <div class="benchHead"><span id="pTag">Problem 1</span><span id="pTimer"></span></div>
+        <svg id="diag" role="img" aria-label="Rigging diagram"></svg>
+      </div>
+      <div class="console">
+        <div class="passes">
+          <div id="pass1" class="pass">Pass 1 · Line outs<small>top to bottom</small></div>
+          <div id="pass2" class="pass">Pass 2 · Tensions<small>back to Block 1</small></div>
+          <div id="pass3" class="pass">Graded<small>check your sheet</small></div>
+        </div>
+        <p class="instr" id="instr"></p>
+        <div id="sheet" class="sheet" aria-label="Organizer"></div>
+        <div class="msg" id="msg" role="status" aria-live="polite"></div>
+        <div class="actions">
+          <button class="go" id="btnAct" type="button">Line outs done → tensions</button>
+        </div>
+        <div id="report" class="report" hidden></div>
+      </div>
+    </section>
+
+    <section id="summary" hidden>
+      <div class="summary">
+        <h1 id="sTitle">Test complete</h1>
+        <div class="sumGrid">
+          <div><span>Score</span><b id="sScore">0</b></div>
+          <div><span>Cells right</span><b id="sAcc">0%</b></div>
+          <div><span>Clean sheets</span><b id="sClean">0</b></div>
+          <div id="sTimeBox" hidden><span>Time</span><b id="sTime">0:00</b></div>
+          <div><span>Best</span><b id="sBest">0</b></div>
+        </div>
+        <div class="newbest" id="sNew" hidden></div>
+        <div class="row">
+          <button class="go" id="btnAgain" type="button">Run it again</button>
+          <button class="ghost" id="btnMenu2" type="button">Change mode</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside id="table" class="table" hidden aria-label="Angle factor table">
+    <header><b>Angle factors</b><button class="tbtn" id="btnTableX" type="button">Close</button></header>
+    <div id="tRows"></div>
+    <p class="tnote">Angle between the two legs of rope at the block. Smaller angle, more tension.</p>
+  </aside>
+
+  <aside id="calc" class="calc" hidden aria-label="Calculator">
+    <div class="calcHead" id="calcHead"><b>Calculator<small>drag me</small></b><button class="tbtn" id="btnCalcX" type="button">Close</button></div>
+    <div class="calcBody">
+      <div class="tape" id="tape" aria-label="Recent calculations"></div>
+      <div class="screen"><span class="pend" id="cPend"></span><span class="val" id="cVal" aria-live="polite">0</span></div>
+      <div class="keys" id="keys">
+        <button type="button" class="key fn" data-k="C">C</button>
+        <button type="button" class="key fn" data-k="back" aria-label="Backspace">⌫</button>
+        <button type="button" class="key fn" data-k="pow" aria-label="Power">yˣ</button>
+        <button type="button" class="key op" data-k="/" aria-label="Divide">÷</button>
+        <button type="button" class="key" data-k="7">7</button><button type="button" class="key" data-k="8">8</button><button type="button" class="key" data-k="9">9</button>
+        <button type="button" class="key op" data-k="*" aria-label="Multiply">×</button>
+        <button type="button" class="key" data-k="4">4</button><button type="button" class="key" data-k="5">5</button><button type="button" class="key" data-k="6">6</button>
+        <button type="button" class="key op" data-k="-" aria-label="Subtract">−</button>
+        <button type="button" class="key" data-k="1">1</button><button type="button" class="key" data-k="2">2</button><button type="button" class="key" data-k="3">3</button>
+        <button type="button" class="key op" data-k="+" aria-label="Add">+</button>
+        <button type="button" class="key wide" data-k="0">0</button><button type="button" class="key" data-k=".">.</button>
+        <button type="button" class="key eq" data-k="=" aria-label="Equals">=</button>
+      </div>
+    </div>
+  </aside>
+
+  <footer>Uses 10% friction per block and the standard rope-angle factor table. Haul line uses 1.1ᴾ × W ÷ P. Answers within 0.5% count, so rounding at each step is fine. A training game, not a rigging plan.</footer>
+</div>
+
+<script>
+(function(){
+const F={180:0,120:1,90:1.41,60:1.73,45:1.84,0:2};
+const ANG=[180,120,90,60,45,0];
+const FACS=[0,1,1.41,1.73,1.84,2];
+const angOf=f=>ANG.find(a=>Math.abs(F[a]-f)<.001);
+const SUB='₀₁₂₃₄₅';
+const sb=i=>SUB[i+1];
+const MODES={simple:{name:'Simple'},test:{name:'Test Mode'},timed:{name:'Timed Test'},haul:{name:'Haul Line'}};
+const PLANS={simple:[1,1],test:[2,2,3,3,3],timed:[2,2,3,3,3],haul:[1,2,3,4,5]};
+let PLAN=[];
+const $=id=>document.getElementById(id);
+const r1=x=>Math.round(x*10)/10;
+const fmt=n=>Number(r1(n)).toLocaleString('en-US',{maximumFractionDigits:1});
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const tol=a=>Math.max(2,Math.abs(a)*0.005);
+const near=(v,a)=>isFinite(v)&&Math.abs(v-a)<=tol(a);
+const nearF=(v,a)=>isFinite(v)&&Math.abs(v-a)<.006;
+const clock=ms=>{const s=Math.round(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+
+let S={mode:null};
+
+function getBest(k){try{return Number(localStorage.getItem('sbs3-'+k))||0}catch(e){return 0}}
+function setBest(k,v){try{localStorage.setItem('sbs3-'+k,String(v))}catch(e){}}
+
+/* ---------- problem ---------- */
+function makeProblem(n){
+  let load=Math.round(300+Math.random()*2100);
+  if(Math.random()<.65)load=Math.round(load/50)*50;
+  const th=[];
+  for(let i=0;i<n;i++)th.push(n===1?pick([45,60,90,120]):i===0?pick([90,120,120,180]):pick([45,60,90,120]));
+  const lin=[],lo=[],af=[],sbt=[];let cur=load;
+  for(let i=0;i<n;i++){lin.push(cur);lo.push(r1(cur*1.1));af.push(F[th[i]]);sbt.push(r1(lo[i]*af[i]));cur=lo[i]}
+  return{n,load,th,lin,lo,af,sbt};
+}
+
+/* ---------- diagram ---------- */
+const V=(x,y)=>({x,y});
+const add=(a,b)=>V(a.x+b.x,a.y+b.y),mul=(a,k)=>V(a.x*k,a.y*k),neg=a=>V(-a.x,-a.y);
+const rad=d=>d*Math.PI/180;
+const rot=(v,d)=>{const a=rad(d);return V(v.x*Math.cos(a)-v.y*Math.sin(a),v.x*Math.sin(a)+v.y*Math.cos(a))};
+const norm=v=>{const l=Math.hypot(v.x,v.y);return l<1e-6?V(0,0):V(v.x/l,v.y/l)};
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+
+function draw(p,o){
+  o=o||{};const show=!!o.show;
+  const out=[],under=[];const bb={x0:1e9,y0:1e9,x1:-1e9,y1:-1e9};
+  const T=v=>{const x=v.x,y=-v.y;bb.x0=Math.min(bb.x0,x);bb.x1=Math.max(bb.x1,x);bb.y0=Math.min(bb.y0,y);bb.y1=Math.max(bb.y1,y);return[x.toFixed(1),y.toFixed(1)]};
+  const L=(a,b,c,arr)=>{const[x1,y1]=T(a),[x2,y2]=T(b);(arr||out).push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${c}"/>`)};
+  const txt=(v,s,c)=>{const w=s.length*4.6;T(add(v,V(w,11)));T(add(v,V(-w,-11)));const[x,y]=T(v);out.push(`<text x="${x}" y="${y}" class="${c}" text-anchor="middle" dominant-baseline="middle">${s}</text>`)};
+  const n=p.n,B=[V(0,0)],dirs=[],legA=[V(0,-1)],sgn=[-1];
+  dirs.push(V(-Math.sin(rad(p.th[0])),-Math.cos(rad(p.th[0]))));
+  const loadC=V(0,-105);
+  for(let i=1;i<n;i++){
+    const Bi=add(B[i-1],mul(dirs[i-1],150));B.push(Bi);
+    const inc=neg(dirs[i-1]);legA.push(inc);
+    const avoid=[loadC,V(0,-50)];
+    for(let j=0;j<i;j++){avoid.push(B[j]);avoid.push(add(B[j],mul(dirs[j],75)))}
+    let best=null;
+    for(const s of [1,-1]){
+      const d=rot(inc,s*p.th[i]);let m=Infinity;
+      for(const k of [50,100,140]){const q=add(Bi,mul(d,k));for(const a of avoid)m=Math.min(m,dist(q,a))}
+      if(!best||m>best.m)best={s,d,m};
+    }
+    dirs.push(best.d);sgn.push(best.s);
+  }
+  L(B[0],V(0,-80),'rope',under);
+  const[rx,ry]=T(V(-58,-80));T(V(58,-132));
+  under.push(`<rect x="${rx}" y="${ry}" width="116" height="52" rx="3" class="loadbox"/>`);
+  L(V(-36,-140),V(36,-140),'grd',under);L(V(-22,-146),V(22,-146),'grd',under);
+  txt(V(0,-106),fmt(p.load)+' lbs','loadt');
+  const legs=[];
+  for(let i=0;i<n;i++){
+    const last=i===n-1,len=last?130:150;
+    const a=B[i],b=add(a,mul(dirs[i],len));legs.push([a,b]);
+    L(a,b,'rope'+(o.focus===i?' hot':''),under);
+    if(last){const d=dirs[i],tip=b,base=add(tip,mul(d,-14)),pp=V(-d.y,d.x);
+      const q=[tip,add(base,mul(pp,7)),add(base,mul(pp,-7))].map(T);
+      out.push(`<polygon points="${q.map(z=>z.join(',')).join(' ')}" class="head"/>`);
+      txt(add(tip,mul(d,16+Math.abs(d.x)*30+Math.abs(d.y)*6)),'to winch','');}
+  }
+  for(let i=0;i<n;i++){
+    const c=B[i],a=legA[i],s=sgn[i],th=p.th[i],on=o.focus===i,r=34;
+    const a0=Math.atan2(a.y,a.x),a1=a0+s*rad(th);
+    if(th>0){const[x0,y0]=T(add(c,V(r*Math.cos(a0),r*Math.sin(a0)))),[x1,y1]=T(add(c,V(r*Math.cos(a1),r*Math.sin(a1))));
+      under.push(`<path d="M${x0} ${y0} A${r} ${r} 0 0 ${s>0?0:1} ${x1} ${y1}" class="arc${on?' on':''}"/>`)}
+    const am=a0+s*rad(th)/2;
+    txt(add(c,V((r+22)*Math.cos(am),(r+22)*Math.sin(am))),th+'°','ang'+(on?' on':''));
+  }
+  for(let i=0;i<n;i++){
+    const c=B[i];let h=norm(neg(add(legA[i],dirs[i])));if(!h.x&&!h.y)h=V(1,0);
+    const eye=add(c,mul(h,30));L(c,eye,'sling');
+    const[ex,ey]=T(eye);out.push(`<circle cx="${ex}" cy="${ey}" r="5" class="eye"/>`);
+    const[cx,cy]=T(c);out.push(`<circle cx="${cx}" cy="${cy}" r="13" class="sheave${o.focus===i?' on':''}"/><circle cx="${cx}" cy="${cy}" r="3.5" class="hub"/>`);
+    txt(add(c,mul(h,58)),show?`SBT${sb(i)} ${fmt(p.sbt[i])}`:`Block ${i+1}`,'sbt '+(show?'done':(o.focus===i?'on':'')));
+  }
+  for(let i=0;i<n;i++){
+    const[a,b]=legs[i];const d=norm(V(b.x-a.x,b.y-a.y));let pp=V(-d.y,d.x);if(pp.y<0||(pp.y===0&&pp.x>0))pp=neg(pp);
+    txt(add(mul(add(a,b),.5),mul(pp,17)),show?`LO${sb(i)} ${fmt(p.lo[i])}`:`LO${sb(i)}`,'ten '+(show?'done':(o.focus===i?'on':'')));
+  }
+  const pad=24;
+  $('diag').setAttribute('viewBox',`${(bb.x0-pad).toFixed(0)} ${(bb.y0-pad).toFixed(0)} ${(bb.x1-bb.x0+2*pad).toFixed(0)} ${(bb.y1-bb.y0+2*pad).toFixed(0)}`);
+  $('diag').innerHTML=under.join('')+out.join('');
+}
+
+/* ---------- sheet ---------- */
+const COLS=['lin','lo','af','sbt'];
+const cellId=(c,i)=>`c-${c}-${i}`;
+function buildSheet(){
+  const p=S.prob;
+  const inp=(c,i,lab,dis)=>`<input class="cell${c==='af'?' af':''}" id="${cellId(c,i)}" inputmode="decimal" autocomplete="off" aria-label="Block ${i+1} ${lab}"${dis?' disabled':''}>`;
+  let a=`<div class="sec s1"><div class="secHead">Pass 1 · All line outs<small>Line out = Line in × 1.1</small></div>`;
+  for(let i=0;i<p.n;i++){
+    a+=`<div class="lrow" data-row="${i}"><span class="blk">Block ${i+1}</span>`;
+    a+=i===0
+      ?`<label>Load (line in)${inp('lin',i,'line in')}</label><span class="op">× 1.1 =</span>`
+      :`<label>LO${sb(i-1)} from above<span class="mirror" id="lmir-${i}">—</span></label><span class="op">× 1.1 =</span>`;
+    a+=`<label>Line out (LO${sb(i)})${inp('lo',i,'line out')}</label></div>`;
+  }
+  a+=`</div><div class="sec s2"><div class="secHead">Pass 2 · Back to Block 1 for SBTs<small>SBT = Line out × factor</small></div><div class="secNote">Opens after every line out is filled.</div>`;
+  for(let i=0;i<p.n;i++){
+    a+=`<div class="lrow" data-row="${i}"><span class="blk">Block ${i+1}</span>`;
+    a+=`<label>LO${sb(i)} from above<span class="mirror" id="mir-${i}">—</span></label><span class="op">×</span>`;
+    a+=`<label>Factor <span class="ang">at ${p.th[i]}°</span>${inp('af',i,'angle factor',true)}</label><span class="op">=</span>`;
+    a+=`<label>SBT${sb(i)}${inp('sbt',i,'snatch block tension',true)}</label></div>`;
+  }
+  $('sheet').innerHTML=a+'</div>';
+}
+function order(){
+  const p=S.prob,o=[];
+  if(S.phase===1){o.push(cellId('lin',0));for(let i=0;i<p.n;i++)o.push(cellId('lo',i))}
+  else if(S.phase===2)for(let i=0;i<p.n;i++)o.push(cellId('af',i),cellId('sbt',i));
+  return o;
+}
+const val=id=>{const raw=$(id).value.replace(/[,\s]/g,'').replace(/lbs?/i,'');return raw===''?NaN:Number(raw)};
+
+function setPhase(ph){
+  S.phase=ph;
+  $('sheet').className='sheet ph'+ph;
+  if(ph===2)for(let i=0;i<S.prob.n;i++){const v=val(cellId('lo',i));$('mir-'+i).textContent=isFinite(v)?fmt(v):'—'}
+  ['pass1','pass2','pass3'].forEach((id,k)=>{$(id).className='pass '+(k+1===ph?'on':k+1<ph?'done':'')});
+  const p=S.prob;
+  for(let i=0;i<p.n;i++){
+    ['lin','lo'].forEach(c=>{const e=$(cellId(c,i));if(!e)return;e.disabled=ph!==1;e.classList.toggle('locked',ph===2)});
+    ['af','sbt'].forEach(c=>{const e=$(cellId(c,i));e.disabled=ph!==2});
+  }
+  const act=$('btnAct');
+  if(ph===1){
+    $('instr').innerHTML=S.prob.n>1
+      ?`<b>Pass 1.</b> Get every line out first. Block 1 starts from the load. Every block after that: the line out above × 1.1. No SBTs yet.`
+      :`<b>Pass 1.</b> Get the line out first: the load × 1.1. No SBT yet.`;
+    act.textContent='Line outs done → tensions';
+  }else if(ph===2){
+    $('instr').innerHTML=`<b>Pass 2.</b> All line outs are done. Go back to Block 1: factor, then SBT = that block's line out × factor.`;
+    act.textContent='Turn in my sheet';
+  }else{
+    $('instr').innerHTML=`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. Read the notes to find where the chain broke.`;
+    act.textContent=S.round>=PLAN.length?'See results →':'Next problem →';
+  }
+  $('msg').textContent='';
+  if(ph<3){const first=order()[0];try{$(first).focus({preventScroll:true})}catch(e){}}
+  else try{act.focus({preventScroll:true})}catch(e){}
+}
+
+/* ---------- grading ---------- */
+function grade(){
+  const p=S.prob,u={lin:[],lo:[],af:[],sbt:[]};
+  for(let i=0;i<p.n;i++)COLS.forEach(c=>u[c].push(c==='lin'&&i>0?u.lo[i-1]:val(cellId(c,i))));
+  const truth={lin:p.lin,lo:p.lo,af:p.af,sbt:p.sbt};
+  let right=0,total=p.n*3+1;
+  for(let i=0;i<p.n;i++)COLS.forEach(c=>{
+    if(c==='lin'&&i>0)return;
+    const e=$(cellId(c,i)),ok=c==='af'?nearF(u[c][i],truth[c][i]):near(u[c][i],truth[c][i]);
+    e.disabled=true;e.classList.remove('locked');e.classList.add(ok?'ok':'bad');
+    if(ok)right++;
+    else{const f=document.createElement('span');f.className='fix';f.textContent=c==='af'?String(truth[c][i]):fmt(truth[c][i]);e.after(f)}
+  });
+  // diagnosis, read in the order the student worked
+  const notes=[];
+  for(let i=0;i<p.n;i++){
+    const R=`Block ${i+1}`;
+    const lin=u.lin[i],lo=u.lo[i],af=u.af[i],sb_=u.sbt[i];
+    const src=i===0?'the load':`your LO${sb(i-1)}`;
+    if(i===0&&!near(lin,p.load))notes.push(`${R}: start from the load, ${fmt(p.load)} lbs.`);
+    if(i>0&&near(lo,p.load*1.1))notes.push(`${R}: started from the load again. Every block after Block 1 starts from the line out above it.`);
+    else if(isFinite(lo)&&isFinite(lin)){
+      if(near(lo,lin))notes.push(`${R}: line out equals ${src}. Friction is missing: × 1.1.`);
+      else if(!near(lo,lin*1.1))notes.push(`${R}: line out should be ${src} × 1.1 = ${fmt(lin*1.1)}.`);
+    }else if(!isFinite(lo))notes.push(`${R}: line out was left blank.`);
+    if(!nearF(af,p.af[i]))notes.push(`${R}: ${p.th[i]}° is factor ${p.af[i]}${isFinite(af)&&angOf(af)!==undefined?`, not ${af} (that's ${angOf(af)}°)`:''}.`);
+    if(!isFinite(sb_))notes.push(`${R}: SBT was left blank.`);
+    else if(isFinite(lo)&&isFinite(af)&&!near(sb_,lo*af)){
+      let found=false;
+      for(let j=0;j<p.n;j++)if(j!==i&&isFinite(u.lo[j])&&af!==0&&near(sb_,u.lo[j]*af)){notes.push(`${R}: SBT used LO${sb(j)}. SBT${sb(i)} uses LO${sb(i)}, same row.`);found=true;break}
+      if(!found&&isFinite(lin)&&af!==0&&near(sb_,lin*af)){notes.push(`${R}: SBT used the line in. Use the line out, with friction.`);found=true}
+      if(!found)notes.push(`${R}: SBT should be your line out × factor = ${fmt(lo*af)}.`);
+    }else if(isFinite(lo)&&isFinite(af)&&!near(sb_,p.sbt[i])&&near(sb_,lo*af)){
+      notes.push(`${R}: SBT math is right. It's off only because the line out or factor above it was off.`);
+    }
+  }
+  const clean=right===total;
+  const pts=right*20+(clean?100:0)+(clean&&S.mode==='timed'?Math.max(0,150-Math.round((Date.now()-S.pStart)/1000)):0);
+  S.score+=pts;S.right+=right;S.cells+=total;
+  if(clean)S.clean++;
+  const rep=$('report');rep.hidden=false;
+  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>Every line out, factor, and SBT is right. That's how it should look on the test.</div>`}
+  else{
+    rep.className='report issues';
+    const uniq=[...new Set(notes)].slice(0,6);
+    rep.innerHTML=`<b class="head">${right} of ${total} cells right · +${pts}</b>${uniq.length?`<ul>${uniq.map(t=>`<li>${t}</li>`).join('')}</ul>`:''}<div>Correct values are shown under each cell in green.</div>`;
+  }
+  draw(p,{show:true});
+  setPhase(3);hud();
+}
+
+/* ---------- haul line (parted blocks) ---------- */
+const nearR=(v,a)=>isFinite(v)&&Math.abs(v-a)<=Math.max(.006,Math.abs(a)*.005);
+const PASS0=['pass1','pass2','pass3'].map(id=>$(id).innerHTML);
+const PASSH=['Count parts<small>ropes holding the load</small>','Friction → ÷ P<small>1.1ᴾ × W ÷ P</small>','Graded<small>check your sheet</small>'];
+function setPassLabels(h){['pass1','pass2','pass3'].forEach((id,k)=>$(id).innerHTML=h?PASSH[k]:PASS0[k])}
+function makeHaul(P){
+  let W=Math.round(400+Math.random()*3600);
+  W=Math.random()<.75?Math.round(W/100)*100:Math.round(W/50)*50;
+  const fr=Math.pow(1.1,P);
+  return{haul:true,P,W,fr,pull:fr*W,hl:fr*W/P};
+}
+function drawHaul(p,o){
+  o=o||{};const show=!!o.show,P=p.P,el=[];
+  const cx=210,bw=Math.max(70,P*26+24),bx=cx-bw/2;
+  const uy=70,uh=34,ly=250,lh=34;
+  const xs=[];for(let i=0;i<P;i++)xs.push(P===1?cx+14:bx+18+i*((bw-36)/Math.max(1,P-1)));
+  // anchor + hook
+  el.push(`<line x1="${cx}" y1="14" x2="${cx}" y2="${uy}" class="sling"/>`);
+  el.push(`<line x1="${cx-40}" y1="14" x2="${cx+40}" y2="14" class="grd"/>`);
+  // upper block
+  el.push(`<rect x="${bx}" y="${uy}" width="${bw}" height="${uh}" rx="${P===1?17:8}" class="blockbox"/>`);
+  const ns=Math.max(1,Math.ceil(P/2));
+  for(let i=0;i<ns;i++){const x=bx+bw*(i+1)/(ns+1);el.push(`<circle cx="${x.toFixed(1)}" cy="${uy+uh/2}" r="4" class="hub"/>`)}
+  // haul line: leaves the upper block on the left, runs down to the winch
+  const hx0=bx+2,hy0=uy+uh/2,hx1=40,hy1=430;
+  el.push(`<line x1="${hx0}" y1="${hy0}" x2="${hx1}" y2="${hy1}" class="haul"/>`);
+  const d=norm(V(hx1-hx0,hy1-hy0)),pp=V(-d.y,d.x),tip=V(hx1,hy1),base=add(tip,mul(d,-16));
+  const pts=[tip,add(base,mul(pp,8)),add(base,mul(pp,-8))].map(q=>q.x.toFixed(1)+','+q.y.toFixed(1)).join(' ');
+  el.push(`<polygon points="${pts}" class="hhead"/>`);
+  el.push(`<text x="${hx1+6}" y="${hy1+22}" class="hl${show?' done':''}" text-anchor="start">${show?'Haul line '+fmt(p.hl)+' lbs':'Haul line = ?'}</text>`);
+  // parts supporting the load
+  const bot=P===1?ly+10:ly;
+  xs.forEach((x,i)=>{
+    el.push(`<line x1="${x.toFixed(1)}" y1="${uy+uh}" x2="${x.toFixed(1)}" y2="${bot}" class="part${show?' lit':''}"/>`);
+    if(show)el.push(`<text x="${(x+9).toFixed(1)}" y="${(uy+uh+ly)/2+(i%2?16:-8)}" class="pn" text-anchor="start">${i+1}</text>`);
+  });
+  // lower block (none for a single part: the rope hooks straight to the load)
+  let loadTop=ly+lh+30;
+  if(P>1){
+    el.push(`<rect x="${bx}" y="${ly}" width="${bw}" height="${lh}" rx="8" class="blockbox"/>`);
+    const nl=Math.max(1,Math.floor(P/2));
+    for(let i=0;i<nl;i++){const x=bx+bw*(i+1)/(nl+1);el.push(`<circle cx="${x.toFixed(1)}" cy="${ly+lh/2}" r="4" class="hub"/>`)}
+    el.push(`<line x1="${cx}" y1="${ly+lh}" x2="${cx}" y2="${loadTop}" class="sling"/>`);
+  }else{
+    loadTop=ly+10;
+    el.push(`<line x1="${xs[0]}" y1="${ly+10}" x2="${xs[0]}" y2="${loadTop}" class="sling"/>`);
+  }
+  const lw=130,lx=(P===1?xs[0]:cx)-lw/2;
+  el.push(`<rect x="${lx}" y="${loadTop}" width="${lw}" height="58" rx="3" class="loadbox"/>`);
+  el.push(`<text x="${lx+lw/2}" y="${loadTop+34}" class="loadt" text-anchor="middle">${fmt(p.W)} lbs</text>`);
+  el.push(`<text x="${cx+bw/2+12}" y="${(uy+uh+ly)/2+4}" text-anchor="start">${show?'P = '+P:'P = ?'}</text>`);
+  $('diag').setAttribute('viewBox','0 0 400 470');
+  $('diag').innerHTML=el.join('');
+}
+function buildHaulSheet(){
+  const p=S.prob;
+  const inp=(id,lab)=>`<input class="cell" id="${id}" inputmode="decimal" autocomplete="off" aria-label="${lab}">`;
+  $('sheet').innerHTML=`<div class="sec s1"><div class="secHead">Haul line tension<small>Haul line = 1.1ᴾ × W ÷ P</small></div>
+  <div class="lrow"><span class="blk">Step 1</span><label>Parts supporting the load (P)${inp('c-hp','parts supporting load')}</label></div>
+  <div class="lrow"><span class="blk">Step 2</span><label>Friction 1.1ᴾ${inp('c-hf','friction 1.1 to the P')}</label><span class="op">×</span><label>Weight (W)<span class="mirror">${fmt(p.W)}</span></label><span class="op">=</span><label>1.1ᴾ × W${inp('c-hm','friction times weight')}</label></div>
+  <div class="lrow"><span class="blk">Step 3</span><label>1.1ᴾ × W<span class="mirror" id="hmir">—</span></label><span class="op">÷</span><label>P<span class="mirror" id="pmir">—</span></label><span class="op">=</span><label>Haul line${inp('c-hl','haul line tension')}</label></div></div>`;
+}
+const HORDER=['c-hp','c-hf','c-hm','c-hl'];
+function setPhaseHaul(ph){
+  S.phase=ph;
+  $('sheet').className='sheet ph'+(ph===3?3:1);
+  ['pass1','pass2','pass3'].forEach((id,k)=>{$(id).className='pass '+(ph===3?(k<2?'done':'on'):(k===0?'on':''))});
+  if(ph===1){
+    $('instr').innerHTML=`<b>Count the parts</b> holding up the load. Don't count the haul line. Then friction is 1.1ᴾ, times the weight, divided by P.`;
+    $('btnAct').textContent='Turn in my sheet';
+    try{$(HORDER[0]).focus({preventScroll:true})}catch(e){}
+  }else{
+    $('instr').innerHTML=`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. The diagram now numbers each part.`;
+    $('btnAct').textContent=S.round>=PLAN.length?'See results →':'Next problem →';
+    try{$('btnAct').focus({preventScroll:true})}catch(e){}
+  }
+  $('msg').textContent='';
+}
+function gradeHaul(){
+  const p=S.prob,u={};
+  HORDER.forEach(id=>u[id]=val(id));
+  const uP=u['c-hp'],uF=u['c-hf'],uM=u['c-hm'],uH=u['c-hl'];
+  const checks=[['c-hp',uP===p.P,String(p.P)],['c-hf',nearR(uF,p.fr),String(Number(p.fr.toFixed(4)))],['c-hm',near(uM,p.pull),fmt(p.pull)],['c-hl',near(uH,p.hl),fmt(p.hl)]];
+  let right=0;
+  checks.forEach(([id,ok,fix])=>{const e=$(id);e.disabled=true;e.classList.add(ok?'ok':'bad');if(ok)right++;else{const f=document.createElement('span');f.className='fix';f.textContent=fix;e.after(f)}});
+  const notes=[];
+  if(uP!==p.P){
+    if(uP===p.P+1)notes.push(`Parts: you counted the haul line. Only count the ${p.P} part${p.P>1?'s':''} holding the load.`);
+    else notes.push(`Parts: count every rope between the blocks that holds the load. This rig has ${p.P}.`);
+  }
+  const Pu=isFinite(uP)&&uP>0?uP:p.P;
+  if(!nearR(uF,p.fr)){
+    if(nearR(uF,1.1*Pu)&&Pu>1)notes.push(`Friction: 1.1ᴾ means 1.1 multiplied by itself ${Pu} times, not 1.1 × ${Pu}.`);
+    else if(nearR(uF,1.1)&&Pu>1)notes.push(`Friction: 10% for every part, so 1.1 to the power of ${Pu}, not just 1.1.`);
+    else if(nearR(uF,Math.pow(1.1,Pu)))notes.push(`Friction math is right for ${Pu} parts. It's off only because the part count was off.`);
+    else notes.push(`Friction: 1.1^${p.P} = ${Number(p.fr.toFixed(4))}. On the calculator: 1.1 yˣ ${p.P} =.`);
+  }
+  if(!near(uM,p.pull)){
+    if(near(uM,p.W))notes.push(`Step 2: friction is missing. Multiply the weight by 1.1ᴾ.`);
+    else if(isFinite(uF)&&near(uM,uF*p.W))notes.push(`Step 2 math is right. It's off only because the friction number was off.`);
+    else notes.push(`Step 2: your 1.1ᴾ × ${fmt(p.W)} = ${isFinite(uF)?fmt(uF*p.W):'?'}.`);
+  }
+  if(!near(uH,p.hl)){
+    if(isFinite(uM)&&near(uH,uM)&&p.P>1)notes.push(`Step 3: you didn't divide by P. The parts share the load.`);
+    else if(near(uH,p.W/p.P))notes.push(`Step 3: that's W ÷ P with no friction. Friction always adds to the haul line.`);
+    else if(isFinite(uM)&&isFinite(uP)&&uP>0&&near(uH,uM/uP))notes.push(`Step 3 division is right. It's off only because a number above it was off.`);
+    else notes.push(`Step 3: your 1.1ᴾ × W ÷ P = ${isFinite(uM)&&Pu?fmt(uM/Pu):'?'}.`);
+  }
+  const clean=right===4,pts=right*25+(clean?100:0);
+  S.score+=pts;S.right+=right;S.cells+=4;if(clean)S.clean++;
+  const rep=$('report');rep.hidden=false;
+  const ma=`${fmt(p.W)} lbs on ${p.P} part${p.P>1?'s':''} takes ${fmt(p.hl)} lbs on the haul line.`;
+  if(clean){rep.className='report clean';rep.innerHTML=`<b class="head">Clean sheet · +${pts}</b><div>${ma}${p.P===1?' One part means no mechanical advantage: friction makes it harder than the weight itself.':''}</div>`}
+  else{rep.className='report issues';rep.innerHTML=`<b class="head">${right} of 4 cells right · +${pts}</b><ul>${notes.slice(0,5).map(t=>`<li>${t}</li>`).join('')}</ul><div>${ma}</div>`}
+  drawHaul(p,{show:true});setPhaseHaul(3);hud();
+}
+
+/* ---------- flow ---------- */
+function show(id){['menu','play','summary'].forEach(s=>$(s).hidden=s!==id);$('btnMenu').hidden=id==='menu'}
+function hud(){$('hScore').textContent=(S.score||0).toLocaleString('en-US');$('hStreak').textContent=S.clean||0;const b=S.mode?getBest(S.mode):0;$('hBest').textContent=b?b.toLocaleString('en-US'):'–'}
+
+function start(mode){
+  clearInterval(S.timer);
+  S={mode,score:0,clean:0,right:0,cells:0,round:0,prob:null,phase:1,t0:Date.now(),pStart:Date.now(),timer:null};
+  PLAN=PLANS[mode];
+  if(mode==='haul')PLAN=PLAN.slice().sort(()=>Math.random()-.5);
+  setPassLabels(mode==='haul');
+  $('fBar').className='formula'+(mode==='haul'?' haul':'');
+  show('play');hud();
+  if(mode==='timed'){S.timer=setInterval(()=>{$('pTimer').textContent=clock(Date.now()-S.t0)},250)}else $('pTimer').textContent='';
+  next();
+}
+function next(){
+  S.round++;
+  if(S.round>PLAN.length)return finish();
+  $('report').hidden=true;S.pStart=Date.now();
+  if(S.mode==='haul'){
+    S.prob=makeHaul(PLAN[S.round-1]);
+    $('pTag').textContent=`${MODES[S.mode].name} · ${S.round} of ${PLAN.length}`;
+    buildHaulSheet();drawHaul(S.prob,{});setPhaseHaul(1);return;
+  }
+  S.prob=makeProblem(PLAN[S.round-1]);
+  $('pTag').textContent=`${MODES[S.mode].name} · ${S.round} of ${PLAN.length} · ${S.prob.n} block${S.prob.n>1?'s':''}`;
+  buildSheet();draw(S.prob,{});setPhase(1);
+}
+function act(){
+  if(S.mode==='haul'){
+    if(S.phase===1){
+      const empty=HORDER.filter(id=>!isFinite(val(id)));
+      if(empty.length){$('msg').textContent='Fill all four boxes before you turn it in.';try{$(empty[0]).focus()}catch(e){}return}
+      gradeHaul();
+    }else next();
+    return;
+  }
+  if(S.phase===1){
+    const empty=order().filter(id=>!isFinite(val(id)));
+    if(empty.length){$('msg').textContent='Fill every line in and line out before moving on. Pass 1 has to be complete.';try{$(empty[0]).focus()}catch(e){}return}
+    setPhase(2);
+  }else if(S.phase===2){
+    const empty=order().filter(id=>!isFinite(val(id)));
+    if(empty.length){$('msg').textContent='Fill every factor and SBT before you turn it in.';try{$(empty[0]).focus()}catch(e){}return}
+    grade();
+  }else next();
+}
+function finish(){
+  clearInterval(S.timer);
+  const elapsed=Date.now()-S.t0;
+  const best=getBest(S.mode),nb=S.score>best;
+  if(nb)setBest(S.mode,S.score);
+  let note=nb&&S.score>0?'New best score':'';
+  if(S.mode==='timed'){
+    const bt=getBest('timed-time');
+    if(S.clean===PLAN.length&&(!bt||elapsed<bt)){setBest('timed-time',elapsed);note=(note?note+' · ':'')+'Fastest all-clean run'}
+    $('sTimeBox').hidden=false;$('sTime').textContent=clock(elapsed);
+  }else $('sTimeBox').hidden=true;
+  $('sTitle').textContent=MODES[S.mode].name+' complete';
+  $('sScore').textContent=S.score.toLocaleString('en-US');
+  $('sAcc').textContent=(S.cells?Math.round(100*S.right/S.cells):0)+'%';
+  $('sClean').textContent=`${S.clean} / ${PLAN.length}`;
+  $('sBest').textContent=Math.max(best,S.score).toLocaleString('en-US');
+  $('sNew').hidden=!note;$('sNew').textContent=note;
+  show('summary');hud();
+}
+
+/* ---------- events ---------- */
+document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>start(b.dataset.mode));
+$('btnAct').onclick=act;
+$('sheet').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||!e.target.classList.contains('cell'))return;
+  e.preventDefault();
+  const o=S.mode==='haul'?HORDER:order(),k=o.indexOf(e.target.id);
+  if(k>=0&&k<o.length-1){try{$(o[k+1]).focus()}catch(_){}}
+  else try{$('btnAct').focus()}catch(_){}
+});
+$('sheet').addEventListener('focusin',e=>{
+  const tr=e.target.closest('[data-row]');if(!tr||S.phase===3||S.mode==='haul')return;
+  draw(S.prob,{focus:Number(tr.dataset.row)});
+});
+$('sheet').addEventListener('input',e=>{
+  $('msg').textContent='';
+  if(e.target.id==='c-hm'||e.target.id==='c-hp'){const v=val(e.target.id);$(e.target.id==='c-hm'?'hmir':'pmir').textContent=isFinite(v)?fmt(v):'—'}
+  const m=/^c-lo-(\d+)$/.exec(e.target.id||'');
+  if(m){const t=$('lmir-'+(Number(m[1])+1));if(t){const v=val(e.target.id);t.textContent=isFinite(v)?fmt(v):'—'}}
+});
+$('btnAgain').onclick=()=>start(S.mode);
+const toMenu=()=>{clearInterval(S.timer);show('menu');S={mode:null};$('fBar').className='formula all';hud()};
+$('btnMenu').onclick=toMenu;$('btnMenu2').onclick=toMenu;
+
+/* ---------- angle table ---------- */
+function vee(th){
+  if(th===0)return `<svg viewBox="0 0 60 40"><line x1="27" y1="6" x2="27" y2="38"/><line x1="33" y1="6" x2="33" y2="38"/><circle cx="30" cy="6" r="4"/></svg>`;
+  if(th===180)return `<svg viewBox="0 0 60 40"><line x1="2" y1="20" x2="58" y2="20"/><circle cx="30" cy="20" r="4"/></svg>`;
+  const a=rad(th/2),L=30,p1=[30-L*Math.sin(a),6+L*Math.cos(a)],p2=[30+L*Math.sin(a),6+L*Math.cos(a)];
+  return `<svg viewBox="0 0 60 40"><line x1="30" y1="6" x2="${p1[0]}" y2="${p1[1]}"/><line x1="30" y1="6" x2="${p2[0]}" y2="${p2[1]}"/><circle cx="30" cy="6" r="4"/></svg>`;
+}
+$('tRows').innerHTML=ANG.map(a=>`<div class="trow">${vee(a)}<span>${a}°</span><b>${F[a]}</b></div>`).join('');
+const toggleTable=()=>{const t=$('table');t.hidden=!t.hidden;$('btnTable').setAttribute('aria-expanded',String(!t.hidden))};
+$('btnTable').onclick=toggleTable;$('btnTableX').onclick=toggleTable;
+
+/* ---------- calculator ---------- */
+const C={disp:'0',acc:null,op:null,fresh:true,tape:[]};
+const SYM={'+':'+','-':'−','*':'×','/':'÷','pow':'^'};
+const clean=r=>{if(!isFinite(r))return 'Error';return String(Number(r.toPrecision(12)))};
+const cfmt=s=>{if(s==='Error')return s;const n=Number(s);return isFinite(n)&&!/\.$/.test(s)&&!/\.\d*0$/.test(s)?n.toLocaleString('en-US',{maximumFractionDigits:10}):s};
+function cShow(){
+  $('cVal').textContent=cfmt(C.disp);
+  $('cPend').textContent=C.op!==null&&C.acc!==null?`${cfmt(clean(C.acc))} ${SYM[C.op]}`:'';
+  $('tape').innerHTML=C.tape.slice(-6).map(t=>`<div>${t}</div>`).join('');
+  const t=$('tape');t.scrollTop=t.scrollHeight;
+}
+function apply(a,op,b){return op==='+'?a+b:op==='-'?a-b:op==='*'?a*b:op==='/'?(b===0?NaN:a/b):Math.pow(a,b)}
+function compute(){
+  const b=Number(C.disp),r=apply(C.acc,C.op,b),res=clean(r);
+  C.tape.push(`${cfmt(clean(C.acc))} ${SYM[C.op]} ${cfmt(clean(b))} = ${cfmt(res)}`);
+  C.disp=res;C.acc=res==='Error'?null:Number(res);
+}
+function key(k){
+  if(C.disp==='Error'&&k!=='C'){C.disp='0';C.acc=null;C.op=null;C.fresh=true}
+  if(/^[0-9.]$/.test(k)){
+    if(C.fresh){C.disp=k==='.'?'0.':k;C.fresh=false}
+    else{if(k==='.'&&C.disp.includes('.'))return;if(C.disp.replace(/[^0-9]/g,'').length>=14)return;C.disp=(C.disp==='0'&&k!=='.')?k:C.disp+k}
+  }else if(k in SYM){
+    if(C.op!==null&&!C.fresh)compute();
+    else if(C.op===null)C.acc=Number(C.disp);
+    if(C.disp!=='Error'){C.op=k;C.fresh=true}
+  }else if(k==='='){
+    if(C.op!==null){compute();C.op=null;C.acc=null;C.fresh=true}
+  }else if(k==='back'){
+    if(!C.fresh){C.disp=C.disp.length>1?C.disp.slice(0,-1):'0';if(C.disp==='-')C.disp='0'}
+  }else if(k==='C'){C.disp='0';C.acc=null;C.op=null;C.fresh=true}
+  cShow();
+}
+$('keys').addEventListener('click',e=>{const b=e.target.closest('.key');if(b)key(b.dataset.k)});
+$('calc').addEventListener('keydown',e=>{
+  const map={'Enter':'=','=':'=','Backspace':'back','Escape':'C','Delete':'C','x':'*','X':'*','^':'pow'};
+  const k=map[e.key]||e.key;
+  if(/^[0-9.]$/.test(k)||k in SYM||k==='='||k==='back'||k==='C'){e.preventDefault();key(k)}
+});
+const toggleCalc=()=>{const c=$('calc');c.hidden=!c.hidden;$('btnCalc').setAttribute('aria-expanded',String(!c.hidden));if(!c.hidden){cShow();try{c.querySelector('.key[data-k="7"]').focus({preventScroll:true})}catch(e){}}};
+$('btnCalc').onclick=toggleCalc;$('btnCalcX').onclick=toggleCalc;
+(function drag(){
+  const box=$('calc'),h=$('calcHead');let sx,sy,ox,oy,on=false;
+  h.addEventListener('pointerdown',e=>{
+    if(e.target.closest('button')||window.innerWidth<=560)return;
+    const r=box.getBoundingClientRect();on=true;sx=e.clientX;sy=e.clientY;ox=r.left;oy=r.top;
+    box.style.left=ox+'px';box.style.top=oy+'px';box.style.right='auto';box.style.bottom='auto';
+    try{h.setPointerCapture(e.pointerId)}catch(_){}
+  });
+  h.addEventListener('pointermove',e=>{
+    if(!on)return;
+    const r=box.getBoundingClientRect();
+    const x=Math.min(Math.max(0,ox+e.clientX-sx),window.innerWidth-r.width);
+    const y=Math.min(Math.max(0,oy+e.clientY-sy),window.innerHeight-r.height);
+    box.style.left=x+'px';box.style.top=y+'px';
+  });
+  const end=()=>{on=false};h.addEventListener('pointerup',end);h.addEventListener('pointercancel',end);
+})();
+
+show('menu');hud();
+})();
+</script>
+
+</body></html>
