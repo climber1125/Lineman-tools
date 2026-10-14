@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuit One-Line — Legs A / B / C</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#10151d;
+    --line-dead:#4a5568; --line-live:#39d98a;
+    --fault-live:#ff4444; --fault-safe:#c07a2a;
+    --meter-on:#39d98a; --meter-off:#ff4444;
+    --amber:#ffb020; --text:#d7dce3; --text-dim:#8a94a3; --border:#232a35;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);height:100%;
+    font-family:"IBM Plex Mono","Roboto Mono",ui-monospace,Menlo,Consolas,monospace;}
+  body{padding:8px;height:100vh;display:flex;flex-direction:column;overflow-y:auto;}
+  h1{font-size:14px;letter-spacing:.02em;font-weight:600;margin:0 0 6px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px;}
+  select,button{font-family:inherit;font-size:11.5px;background:#161d28;color:var(--text);
+    border:1px solid var(--border);border-radius:4px;padding:6px 9px;cursor:pointer;}
+  button:hover{background:#1c2531;}
+  button:active{transform:translateY(1px);}
+  button.danger{border-color:#5a2020;color:#ff8b8b;}
+  button.primary{border-color:#1f5c3d;color:var(--line-live);}
+  button.reset{border-color:#3a3320;color:var(--amber);}
+  .svg-wrap{width:100%;flex:1 1 auto;min-height:0;
+    background:radial-gradient(ellipse at 50% 0%, #121926 0%, #0a0e14 70%);
+    border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  svg{display:block;width:100%;height:100%;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:10.5px;color:var(--text-dim);margin-top:6px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .swatch{width:16px;height:3px;display:inline-block;border-radius:1px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  #faultsPanel .row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border);font-size:11.5px;}
+  #faultsPanel .row:last-child{border-bottom:none;}
+  #faultsPanel .fname{color:#ff9b9b;}
+  #faultsPanel .empty{color:var(--text-dim);font-style:italic;font-size:11.5px;}
+  #log{font-size:11px;line-height:1.55;max-height:150px;overflow-y:auto;color:var(--text-dim);}
+  #log .entry.trip{color:var(--fault-live);}
+  #log .entry.fault{color:#ff9b9b;}
+  #log .entry.clear{color:var(--line-live);}
+  #log .ts{color:var(--text-dim);margin-right:6px;}
+  .lbl{fill:var(--text-dim);font-size:11px;}
+  .lbl.seg{fill:#c8cfd8;font-size:12px;font-weight:600;}
+  .lbl.title{fill:var(--text);font-size:12.5px;font-weight:600;}
+  details summary{cursor:pointer;font-size:11.5px;color:var(--text-dim);padding:2px 0;}
+  details[open] summary{margin-bottom:6px;}
+  .hint{font-size:10.5px;color:var(--text-dim);margin:6px 0 0;}
+  .switch-hit,.breaker-hit{cursor:pointer;}
+</style>
+</head>
+<body>
+
+<h1>CIRCUIT ONE-LINE — FEEDER LEGS A / B / C</h1>
+
+<div class="panel toolbar">
+  <select id="faultZone">
+    <optgroup label="Whole Circuit">
+      <option value="main">Main Breaker (head of circuit)</option>
+    </optgroup>
+    <optgroup label="Leg A" id="optA"></optgroup>
+    <optgroup label="Leg B" id="optB"></optgroup>
+    <optgroup label="Leg C" id="optC"></optgroup>
+  </select>
+  <button class="danger" id="btnInsertFault">Insert Fault</button>
+  <button class="primary" id="btnClearFaults">Clear All</button>
+  <button class="reset" id="btnReset">Reset</button>
+</div>
+
+<div class="svg-wrap">
+  <svg id="scene" viewBox="0 0 1800 900" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<details style="margin-top:6px;">
+  <summary>Legend, active faults &amp; event log ▾</summary>
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--line-live)"></i> Energized line</span>
+    <span><i class="swatch" style="background:var(--line-dead)"></i> De-energized line</span>
+    <span><i class="dot" style="background:var(--meter-on)"></i> Meter — has power</span>
+    <span><i class="dot" style="background:var(--meter-off)"></i> Meter — outage</span>
+    <span><i class="dot" style="background:var(--fault-safe)"></i> Isolated fault (safe)</span>
+  </div>
+  <div class="panel" style="margin-top:8px;">
+    <div class="lbl title" style="margin-bottom:6px;">ACTIVE FAULTS</div>
+    <div id="faultsPanel"><div class="empty">No faults on the system.</div></div>
+  </div>
+  <div class="panel" style="margin-top:8px;">
+    <div class="lbl title" style="margin-bottom:6px;">EVENT LOG</div>
+    <div id="log"></div>
+  </div>
+  <p class="hint">Insert a fault on any section. If it's energized, the switch protecting that section trips and everything downstream on that leg goes dark. Isolate by opening switches around the fault, or restore the tail end by closing a normally-open tie to backfeed from the next leg.</p>
+</details>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- geometry ---------- */
+const LEG_START_X = 380, SEG_W = 135;
+const Y_A = 150, Y_B = 470, Y_C = 790;
+const RISER_X = 280, RISER_Y = 470;
+const HEAD_X = 170, HEAD_Y = 470;
+const COUNT = { A:7, B:8, C:9 };
+const LEG_Y = { A:Y_A, B:Y_B, C:Y_C };
+function nodeX(i){ return LEG_START_X + i*SEG_W; }
+
+/* ---------- graph / state ---------- */
+const SWITCHES = { brk0:{closed:true,tripped:false}, tieAB:{closed:false,tripped:false}, tieBC:{closed:false,tripped:false} };
+const EDGES = [
+  {id:'brk0', a:'source', b:'riser', sw:'brk0'},
+  {id:'wireA0', a:'riser', b:'A0'},
+  {id:'wireB0', a:'riser', b:'B0'},
+  {id:'wireC0', a:'riser', b:'C0'},
+  {id:'tieAB', a:'A7', b:'B8', sw:'tieAB'},
+  {id:'tieBC', a:'B8', b:'C9', sw:'tieBC'}
+];
+['A','B','C'].forEach(leg=>{
+  for(let i=1;i<=COUNT[leg];i++){
+    const id = leg+i;
+    SWITCHES[id] = {closed:true, tripped:false};
+    EDGES.push({id, a:leg+(i-1), b:id, sw:id});
+  }
+});
+const faults = { main:false };
+const faultTimers = { main:0 };
+['A','B','C'].forEach(leg=>{ for(let i=1;i<=COUNT[leg];i++){ faults[leg+i]=false; faultTimers[leg+i]=0; } });
+const ZONE_DEVICE = (z)=> z==='main' ? 'brk0' : z;
+function ZONE_LABEL(z){ return z==='main' ? 'Main Breaker / Whole Circuit' : ('Section '+z); }
+const TRIP_MS = 1500, TICK_MS = 300;
+
+/* populate fault dropdown */
+(function fillSelect(){
+  ['A','B','C'].forEach(leg=>{
+    const grp = document.getElementById('opt'+leg);
+    for(let i=1;i<=COUNT[leg];i++){
+      const o=document.createElement('option'); o.value=leg+i; o.textContent='Section '+leg+i;
+      grp.appendChild(o);
+    }
+  });
+})();
+
+/* ---------- svg helpers ---------- */
+const svg = document.getElementById('scene');
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); (parent||svg).appendChild(e); return e; }
+function text(x,y,str,cls,anchor){ const t=el('text',{x,y,class:'lbl'+(cls?(' '+cls):''),'text-anchor':anchor||'middle'}); t.textContent=str; return t; }
+
+const wireLayer = el('g');
+const deviceLayer = el('g');
+const faultLayer = el('g');
+
+const wireEls = {};
+function wire(key,d){ const p=el('path',{d,fill:'none','stroke-width':3,'stroke-linecap':'round'},wireLayer); wireEls[key]=wireEls[key]||[]; wireEls[key].push(p); return p; }
+
+const switchEls = {};
+function drawSwitch(id,x1,y1,x2,y2){
+  const g=el('g',{class:'switch-hit'});
+  el('circle',{cx:x1,cy:y1,r:3,fill:'#c8cfd8'},g);
+  el('circle',{cx:x2,cy:y2,r:3,fill:'#c8cfd8'},g);
+  const blade=el('line',{x1,y1,x2,y2,'stroke-width':3,'stroke-linecap':'round'},g);
+  const hit=el('rect',{x:Math.min(x1,x2)-10,y:Math.min(y1,y2)-14,width:Math.abs(x2-x1)+20,height:Math.abs(y2-y1)+28,fill:'transparent'});
+  g.appendChild(hit);
+  g.addEventListener('click',()=>onSwitchClick(id));
+  switchEls[id]={g,blade,x1,y1,x2,y2};
+  deviceLayer.appendChild(g);
+}
+
+const breakerEls={};
+function drawBreaker(id,cx,cy){
+  const g=el('g',{class:'breaker-hit'});
+  const s=15;
+  const rect=el('rect',{x:cx-s,y:cy-s,width:s*2,height:s*2,fill:'#141a24','stroke-width':2.5,rx:3},g);
+  const d1=el('line',{x1:cx-s+3,y1:cy-s+3,x2:cx+s-3,y2:cy+s-3,'stroke-width':2},g);
+  const d2=el('line',{x1:cx-s+3,y1:cy+s-3,x2:cx+s-3,y2:cy-s+3,'stroke-width':2},g);
+  const hit=el('rect',{x:cx-s-10,y:cy-s-10,width:s*2+20,height:s*2+20,fill:'transparent'},g);
+  g.addEventListener('click',()=>onBreakerClick(id));
+  breakerEls[id]={g,rect,d1,d2};
+  deviceLayer.appendChild(g);
+}
+
+/* ---------- source / head breaker / riser ---------- */
+el('line',{x1:12,y1:HEAD_Y,x2:HEAD_X-24,y2:HEAD_Y,stroke:'#e8c344','stroke-width':5},wireLayer);
+text(60,HEAD_Y-12,'Substation Getaway','title',"start");
+drawBreaker('brk0', HEAD_X, HEAD_Y);
+text(HEAD_X,HEAD_Y+34,'Main Brk','small');
+wire('wHR', `M ${HEAD_X+16} ${HEAD_Y} L ${RISER_X} ${RISER_Y}`);
+el('circle',{cx:RISER_X,cy:RISER_Y,r:5,fill:'#c8cfd8'},wireLayer);
+text(RISER_X,RISER_Y-14,'Riser','small');
+
+/* leg lead-ins */
+wire('wA0', `M ${RISER_X} ${RISER_Y} L ${nodeX(0)} ${Y_A}`);
+wire('wB0', `M ${RISER_X} ${RISER_Y} L ${nodeX(0)} ${Y_B}`);
+wire('wC0', `M ${RISER_X} ${RISER_Y} L ${nodeX(0)} ${Y_C}`);
+text(nodeX(0)-10, Y_A-16, 'LEG A', 'title', 'end');
+text(nodeX(0)-10, Y_B-16, 'LEG B', 'title', 'end');
+text(nodeX(0)-10, Y_C-16, 'LEG C', 'title', 'end');
+
+/* ---------- build legs ---------- */
+const transformerEls = {}; // segId -> {tri}
+const meterEls = {}; // segId -> [circle,circle]
+const zonePos = { main:{x:HEAD_X,y:HEAD_Y-46} };
+
+['A','B','C'].forEach(leg=>{
+  const y = LEG_Y[leg];
+  for(let i=1;i<=COUNT[leg];i++){
+    const segId = leg+i;
+    const xA = nodeX(i-1), xB = nodeX(i);
+    const swL = xA+40, swR = swL+26;
+    wire(segId+'_pre', `M ${xA} ${y} L ${swL} ${y}`);
+    drawSwitch(segId, swL, y, swR, y);
+    wire(segId+'_post', `M ${swR} ${y} L ${xB} ${y}`);
+    text((xA+xB)/2, y+20, segId, 'seg');
+
+    // transformer above the line, in the post-switch (segment body) portion
+    const tx = (swR + xB)/2, ty = y-58;
+    const tri = el('polygon',{points:`${tx},${ty-13} ${tx-11},${ty+8} ${tx+11},${ty+8}`,fill:'none','stroke-width':2},wireLayer);
+    el('line',{x1:tx,y1:ty+8,x2:tx,y2:y,'stroke-width':1.6,stroke:'#5a6478'},wireLayer);
+    transformerEls[segId]=tri;
+
+    // two meters above the transformer
+    const m1x=tx-20, m2x=tx+20, my=ty-30;
+    el('line',{x1:tx,y1:ty-13,x2:m1x,y2:my+8,stroke:'#5a6478','stroke-width':1.3},wireLayer);
+    el('line',{x1:tx,y1:ty-13,x2:m2x,y2:my+8,stroke:'#5a6478','stroke-width':1.3},wireLayer);
+    const mg=[];
+    [m1x,m2x].forEach(mx=>{
+      const g=el('g',{},wireLayer);
+      const c=el('circle',{cx:mx,cy:my,r:9,'stroke-width':1.3},g);
+      const t=el('text',{x:mx,y:my+3.5,'text-anchor':'middle','font-size':9,'font-weight':'bold',fill:'#0a0e14'},g);
+      t.textContent='M';
+      mg.push(c);
+    });
+    meterEls[segId]=mg;
+
+    zonePos[segId]={x:tx,y:ty-30};
+  }
+});
+
+/* tail nodes for ties */
+const tailPos = { A:{x:nodeX(COUNT.A), y:Y_A}, B:{x:nodeX(COUNT.B), y:Y_B}, C:{x:nodeX(COUNT.C), y:Y_C} };
+drawSwitch('tieAB', tailPos.A.x+20, tailPos.A.y, tailPos.B.x+20, tailPos.B.y);
+text((tailPos.A.x+tailPos.B.x)/2+40, (tailPos.A.y+tailPos.B.y)/2, 'Tie A–B (N.O.)','small');
+drawSwitch('tieBC', tailPos.B.x+20, tailPos.B.y, tailPos.C.x+20, tailPos.C.y);
+text((tailPos.B.x+tailPos.C.x)/2+40, (tailPos.B.y+tailPos.C.y)/2, 'Tie B–C (N.O.)','small');
+
+/* fault markers */
+const faultMarkerEls={};
+Object.keys(zonePos).forEach(z=>{
+  const p=zonePos[z];
+  const g=el('g',{opacity:0,'pointer-events':'none'},faultLayer);
+  el('circle',{cx:p.x,cy:p.y,r:12,fill:'none','stroke-width':2.4},g);
+  const t=el('text',{x:p.x,y:p.y+4,'text-anchor':'middle','font-size':13,'font-weight':'bold'},g);
+  t.textContent='⚡';
+  faultMarkerEls[z]={g,circle:g.firstChild,text:t};
+});
+
+/* ---------- energization (graph BFS, allows backfeed via ties) ---------- */
+function computeEnergized(){
+  const en={source:true};
+  const queue=['source'];
+  while(queue.length){
+    const u=queue.shift();
+    for(const e of EDGES){
+      let other=null;
+      if(e.a===u) other=e.b; else if(e.b===u) other=e.a; else continue;
+      if(en[other]) continue;
+      if(e.sw){ const s=SWITCHES[e.sw]; if(!(s.closed && !s.tripped)) continue; }
+      en[other]=true; queue.push(other);
+    }
+  }
+  return en;
+}
+function edgeOf(zone){ return zone==='main' ? {a:'source',b:'riser',sw:'brk0'} : EDGES.find(e=>e.id===zone); }
+
+/* ---------- logging ---------- */
+function log(msg,cls){
+  const box=document.getElementById('log');
+  const row=document.createElement('div');
+  row.className='entry'+(cls?(' '+cls):'');
+  const ts=new Date().toLocaleTimeString([], {hour12:false});
+  row.innerHTML='<span class="ts">'+ts+'</span>'+msg;
+  box.appendChild(row); box.scrollTop=box.scrollHeight;
+}
+
+/* ---------- interactions ---------- */
+function onSwitchClick(id){
+  const s=SWITCHES[id];
+  if(s.tripped){ s.tripped=false; log('Switch '+id+' RESET to open — inspect before closing.','clear'); }
+  else { s.closed=!s.closed; log((s.closed?'CLOSED ':'OPENED ')+'switch '+id+'.'); }
+  renderNow();
+}
+function onBreakerClick(id){
+  const b=SWITCHES[id];
+  if(b.tripped){ b.tripped=false; b.closed=false; log('Main Breaker RESET to open — inspect before closing.','clear'); }
+  else { b.closed=!b.closed; log((b.closed?'CLOSED ':'OPENED ')+'Main Breaker.'); }
+  renderNow();
+}
+document.getElementById('btnInsertFault').addEventListener('click',()=>{
+  const z=document.getElementById('faultZone').value;
+  if(faults[z]){ log('Fault already present on '+ZONE_LABEL(z)+'.'); return; }
+  faults[z]=true; faultTimers[z]=0;
+  log('⚡ FAULT INSERTED on '+ZONE_LABEL(z)+'.','fault');
+  renderNow();
+});
+document.getElementById('btnClearFaults').addEventListener('click',()=>{
+  let any=false;
+  Object.keys(faults).forEach(z=>{ if(faults[z]) any=true; faults[z]=false; faultTimers[z]=0; });
+  log(any ? 'All faults cleared (repaired).' : 'No faults to clear.', any?'clear':undefined);
+  renderNow();
+});
+document.getElementById('btnReset').addEventListener('click',()=>{
+  Object.keys(SWITCHES).forEach(id=>{
+    const s=SWITCHES[id];
+    s.closed = (id==='tieAB'||id==='tieBC') ? false : true;
+    s.tripped=false;
+  });
+  Object.keys(faults).forEach(z=>{ faults[z]=false; faultTimers[z]=0; });
+  document.getElementById('log').innerHTML='';
+  log('System reset to normal configuration.','clear');
+  renderNow();
+});
+function clearFaultSingle(z){ faults[z]=false; faultTimers[z]=0; log('Fault cleared on '+ZONE_LABEL(z)+' (repaired).','clear'); renderNow(); }
+
+/* ---------- render ---------- */
+let flashOn=false, dashPhase=0;
+function paintWireKey(key,energized){
+  const els=wireEls[key]; if(!els) return;
+  els.forEach(p=>{
+    if(energized){ p.setAttribute('stroke','#39d98a'); p.setAttribute('stroke-dasharray','6 5'); p.setAttribute('stroke-dashoffset',-dashPhase); }
+    else { p.setAttribute('stroke','#4a5568'); p.setAttribute('stroke-dasharray','none'); }
+  });
+}
+function paintSwitchVisual(id,leftEnergized,rightEnergized){
+  const sObj=switchEls[id]; if(!sObj) return;
+  const s=SWITCHES[id];
+  const {blade,x1,y1,x2,y2}=sObj;
+  let bx2=x2,by2=y2;
+  if(!s.closed){
+    const dx=x2-x1, dy=y2-y1;
+    const len=Math.sqrt(dx*dx+dy*dy)*0.6;
+    const ang=Math.atan2(dy,dx)-0.8;
+    bx2=x1+Math.cos(ang)*len; by2=y1+Math.sin(ang)*len;
+  }
+  blade.setAttribute('x2',bx2); blade.setAttribute('y2',by2);
+  blade.setAttribute('stroke', s.tripped ? '#ff4444' : (leftEnergized||rightEnergized ? '#39d98a' : (s.closed?'#c8cfd8':'#6a7484')));
+}
+function paintBreakerVisual(id,energized){
+  const b=breakerEls[id]; const s=SWITCHES[id]; if(!b) return;
+  let col = s.tripped ? '#ff4444' : (!s.closed ? '#6a7484' : (energized?'#39d98a':'#c8cfd8'));
+  b.rect.setAttribute('stroke',col); b.d1.setAttribute('stroke',col); b.d2.setAttribute('stroke',col);
+  b.rect.setAttribute('fill', s.tripped?'rgba(255,68,68,0.12)':(s.closed?'rgba(57,217,138,0.06)':'#141a24'));
+}
+function renderFaultsPanel(){
+  const box=document.getElementById('faultsPanel');
+  const active=Object.keys(faults).filter(z=>faults[z]);
+  if(active.length===0){ box.innerHTML='<div class="empty">No faults on the system.</div>'; return; }
+  box.innerHTML='';
+  active.forEach(z=>{
+    const dev=SWITCHES[ZONE_DEVICE(z)];
+    const status = dev.tripped ? 'isolated — device tripped' : (dev.closed ? 'LIVE — device still closed' : 'isolated — device open');
+    const row=document.createElement('div'); row.className='row';
+    row.innerHTML='<span class="fname">'+ZONE_LABEL(z)+' <span style="color:var(--text-dim)">('+status+')</span></span>';
+    const btn=document.createElement('button'); btn.textContent='Clear'; btn.style.fontSize='10.5px'; btn.style.padding='4px 8px';
+    btn.addEventListener('click',()=>clearFaultSingle(z));
+    row.appendChild(btn); box.appendChild(row);
+  });
+}
+function renderNow(){
+  const en=computeEnergized();
+
+  paintWireKey('wHR', en.riser);
+  paintWireKey('wA0', en.A0); paintWireKey('wB0', en.B0); paintWireKey('wC0', en.C0);
+
+  ['A','B','C'].forEach(leg=>{
+    for(let i=1;i<=COUNT[leg];i++){
+      const z=leg+i;
+      const e=edgeOf(z);
+      const leftE=en[e.a], rightE=en[e.b];
+      paintWireKey(z+'_pre', leftE);
+      paintWireKey(z+'_post', rightE);
+      paintSwitchVisual(z, leftE, rightE);
+
+      const tri=transformerEls[z];
+      tri.setAttribute('stroke', rightE?'#39d98a':'#4a5568');
+      const mg=meterEls[z];
+      mg.forEach(c=>c.setAttribute('fill', rightE?'#39d98a':'#ff4444'));
+    }
+  });
+
+  paintBreakerVisual('brk0', en.riser);
+  const tieABe = edgeOf('tieAB'), tieBCe = edgeOf('tieBC');
+  paintSwitchVisual('tieAB', en[tieABe.a], en[tieABe.b]);
+  paintSwitchVisual('tieBC', en[tieBCe.a], en[tieBCe.b]);
+
+  Object.keys(faultMarkerEls).forEach(z=>{
+    const fm=faultMarkerEls[z];
+    if(!faults[z]){ fm.g.setAttribute('opacity',0); return; }
+    const e=edgeOf(z); const dev=SWITCHES[e.sw];
+    const live = dev.closed && !dev.tripped && en[e.a];
+    fm.g.setAttribute('opacity',1);
+    const col = live ? (flashOn?'#ff4444':'#7a1f1f') : '#c07a2a';
+    fm.circle.setAttribute('stroke',col); fm.text.setAttribute('fill',col);
+  });
+
+  renderFaultsPanel();
+}
+
+function tick(){
+  const en=computeEnergized();
+  Object.keys(faults).forEach(z=>{
+    if(!faults[z]){ faultTimers[z]=0; return; }
+    const e=edgeOf(z); const dev=SWITCHES[e.sw];
+    if(en[e.a] && dev.closed && !dev.tripped){
+      faultTimers[z]+=TICK_MS;
+      if(faultTimers[z]>=TRIP_MS){
+        dev.tripped=true; dev.closed=false; faultTimers[z]=0;
+        log('⚠ Device '+e.sw+' TRIPPED — fault detected on '+ZONE_LABEL(z)+'.','trip');
+      }
+    } else faultTimers[z]=0;
+  });
+  flashOn=!flashOn; dashPhase=(dashPhase+3)%1000;
+  renderNow();
+}
+setInterval(tick, TICK_MS);
+renderNow();
+log('System initialized — normal configuration, all sections energized.');
+
+})();
+</script>
+</body>
+</html>

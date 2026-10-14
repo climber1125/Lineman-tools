@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Red Phase Substation — Single Line Simulator</title>
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#10151d;
+    --line-dead:#4a5568;
+    --line-live:#39d98a;
+    --fault-live:#ff4444;
+    --fault-safe:#c07a2a;
+    --amber:#ffb020;
+    --text:#d7dce3;
+    --text-dim:#8a94a3;
+    --border:#232a35;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);height:100%;
+    font-family:"IBM Plex Mono","Roboto Mono",ui-monospace,Menlo,Consolas,monospace;}
+  body{padding:8px 8px 8px;height:100vh;display:flex;flex-direction:column;overflow-y:auto;}
+  h1{font-size:15px;letter-spacing:.02em;font-weight:600;margin:0 0 2px;color:var(--text);}
+  .subhead{font-size:11.5px;color:var(--text-dim);margin:0 0 14px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:10px;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  select,button{
+    font-family:inherit;font-size:12px;background:#161d28;color:var(--text);
+    border:1px solid var(--border);border-radius:4px;padding:7px 10px;cursor:pointer;
+  }
+  button{transition:background .12s;}
+  button:hover{background:#1c2531;}
+  button:active{transform:translateY(1px);}
+  button.danger{border-color:#5a2020;color:#ff8b8b;}
+  button.danger:hover{background:#2a1414;}
+  button.primary{border-color:#1f5c3d;color:var(--line-live);}
+  button.primary:hover{background:#0f2a1c;}
+  button.reset{border-color:#3a3320;color:var(--amber);}
+  .svg-wrap{width:100%;flex:1 1 auto;min-height:0;background:radial-gradient(ellipse at 50% 0%, #121926 0%, #0a0e14 70%);
+    border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  svg{display:block;width:100%;height:100%;}
+  .top{flex:0 0 auto;}
+  .bottom{flex:0 0 auto;}
+  details summary{cursor:pointer;font-size:11.5px;color:var(--text-dim);padding:2px 0;}
+  details[open] summary{margin-bottom:6px;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:10.5px;color:var(--text-dim);margin-top:8px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .swatch{width:16px;height:3px;display:inline-block;border-radius:1px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  #faultsPanel{font-size:11.5px;}
+  #faultsPanel .row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border);}
+  #faultsPanel .row:last-child{border-bottom:none;}
+  #faultsPanel .fname{color:#ff9b9b;}
+  #faultsPanel .empty{color:var(--text-dim);font-style:italic;}
+  #log{font-size:11px;line-height:1.55;max-height:150px;overflow-y:auto;color:var(--text-dim);}
+  #log .entry{color:var(--text);}
+  #log .entry.trip{color:var(--fault-live);}
+  #log .entry.fault{color:#ff9b9b;}
+  #log .entry.clear{color:var(--line-live);}
+  #log .ts{color:var(--text-dim);margin-right:6px;}
+  .lbl{fill:var(--text-dim);font-size:12px;}
+  .lbl.small{font-size:10.5px;}
+  .lbl.title{fill:var(--text);font-size:12.5px;font-weight:600;}
+  .hint{font-size:10.5px;color:var(--text-dim);margin-top:6px;}
+  .switch-hit, .breaker-hit{cursor:pointer;}
+  .switch-hit:hover rect, .breaker-hit:hover rect{stroke:var(--amber);}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1 style="margin:0 0 6px;">RED PHASE SUBSTATION — SINGLE LINE SIMULATOR</h1>
+  <div class="panel toolbar" style="margin-bottom:6px;padding:7px 8px;">
+    <select id="faultZone">
+      <option value="main">Main Transformer Circuit</option>
+      <option value="f1">Feeder #1201</option>
+      <option value="f2">Feeder #1202</option>
+      <option value="f3">Feeder #1203</option>
+    </select>
+    <button class="danger" id="btnInsertFault">Insert Fault</button>
+    <button class="primary" id="btnClearFaults">Clear All</button>
+    <button class="reset" id="btnReset">Reset</button>
+  </div>
+</div>
+
+<div class="svg-wrap">
+  <svg id="scene" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="bottom">
+  <details style="margin-top:6px;">
+    <summary>Legend, active faults &amp; event log ▾</summary>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--line-live)"></i> Energized</span>
+      <span><i class="swatch" style="background:var(--line-dead)"></i> De-energized</span>
+      <span><i class="swatch" style="background:var(--fault-live)"></i> Live fault</span>
+      <span><i class="dot" style="background:var(--fault-safe)"></i> Isolated fault (safe)</span>
+      <span><i class="dot" style="background:var(--line-live)"></i> Load energized</span>
+    </div>
+    <div class="panel" style="margin-top:8px;">
+      <div class="lbl title" style="margin-bottom:6px;">ACTIVE FAULTS</div>
+      <div id="faultsPanel"><div class="empty">No faults on the system.</div></div>
+    </div>
+    <div class="panel">
+      <div class="lbl title" style="margin-bottom:6px;">EVENT LOG</div>
+      <div id="log"></div>
+    </div>
+    <p class="hint">To isolate a faulted feeder: open both disconnects around it, then Clear Fault. To restore its load, close the transfer‑bus tie so an adjacent feeder's breaker can carry it.</p>
+  </details>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- geometry constants ---------- */
+const SRC_A_X=180, SRC_B_X=620, MID_X=400;
+const Y_STUB0=28, Y_SWTOP=52, Y_SWBOT=98, Y_MERGE=138;
+const Y_S2_TOP=138, Y_S2_BOT=183;
+const Y_B1_TOP=193, Y_B1_BOT=250;
+const Y_CT1=270;
+const Y_XFMR_TOP=290, Y_XFMR_BOT=352;
+const Y_S3_TOP=362, Y_S3_BOT=407;
+const Y_MAINBUS=452;
+const BUS_L=90, BUS_R=710;
+const FX=[210,400,590];
+const Y_FTOP_TOP=452, Y_FTOP_BOT=497;
+const Y_CT2=513;
+const Y_R_TOP=525, Y_R_BOT=580;
+const Y_FBOT_TOP=590, Y_FBOT_BOT=635;
+const Y_TBUS=650;
+const Y_LOAD=710;
+
+/* ---------- state ---------- */
+const sw = {
+  s1:{closed:true,type:'sw'}, salt:{closed:true,type:'sw'},
+  s2:{closed:true,type:'sw'}, b1:{closed:true,tripped:false,type:'brk'}, s3:{closed:true,type:'sw'},
+  f1_top:{closed:true,type:'sw'}, r1:{closed:true,tripped:false,type:'brk'}, f1_bot:{closed:true,type:'sw'},
+  f2_top:{closed:true,type:'sw'}, r2:{closed:true,tripped:false,type:'brk'}, f2_bot:{closed:true,type:'sw'},
+  f3_top:{closed:true,type:'sw'}, r3:{closed:true,tripped:false,type:'brk'}, f3_bot:{closed:true,type:'sw'},
+  tie12:{closed:false,type:'sw'}, tie23:{closed:false,type:'sw'}
+};
+const faults = { main:false, f1:false, f2:false, f3:false };
+const faultTimers = { main:0, f1:0, f2:0, f3:0 };
+const ZONE_LABEL = { main:'Main Transformer Circuit', f1:'Feeder #1201', f2:'Feeder #1202', f3:'Feeder #1203' };
+const ZONE_DEVICE = { main:'b1', f1:'r1', f2:'r2', f3:'r3' };
+const DEVICE_LABEL = { b1:'Motor Circuit Switcher (B1)', r1:'Recloser R1', r2:'Recloser R2', r3:'Recloser R3' };
+const TRIP_MS = 1500;
+const TICK_MS = 300;
+
+/* ---------- svg helpers ---------- */
+const svg = document.getElementById('scene');
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent){
+  const e=document.createElementNS(NS,tag);
+  for(const k in attrs) e.setAttribute(k,attrs[k]);
+  (parent||svg).appendChild(e);
+  return e;
+}
+function text(x,y,str,cls,anchor){
+  const t=el('text',{x,y,class:'lbl'+(cls?(' '+cls):''),'text-anchor':anchor||'start'});
+  t.textContent=str;
+  return t;
+}
+
+const wireLayer = el('g',{id:'wires'});
+const deviceLayer = el('g',{id:'devices'});
+const faultLayer = el('g',{id:'faultmarks'});
+const labelLayer = el('g',{id:'labels'});
+
+const wireEls = {}; // key -> path element(s)
+function wire(key, d){
+  const p = el('path',{d, fill:'none', 'stroke-width':3, 'stroke-linecap':'round'}, wireLayer);
+  wireEls[key]=wireEls[key]||[];
+  wireEls[key].push(p);
+  return p;
+}
+
+/* switch: vertical or horizontal segment between (x1,y1)-(x2,y2) */
+const switchEls = {};
+function drawSwitch(id,x1,y1,x2,y2,label,labelDx,labelDy,anchor){
+  const g = el('g',{class:'switch-hit','data-sw':id});
+  el('circle',{cx:x1,cy:y1,r:3.2,fill:'#c8cfd8'},g);
+  el('circle',{cx:x2,cy:y2,r:3.2,fill:'#c8cfd8'},g);
+  const blade = el('line',{x1,y1,x2,y2,'stroke-width':3,'stroke-linecap':'round'},g);
+  const hit = el('rect',{x:Math.min(x1,x2)-14,y:Math.min(y1,y2)-14,width:Math.abs(x2-x1)+28,height:Math.abs(y2-y1)+28,
+    fill:'transparent',stroke:'transparent','stroke-width':2,rx:4},g);
+  g.appendChild(hit); // keep hit last for pointer priority styling? order doesn't matter for events
+  if(label){ text(x1+(labelDx||8), y1+(labelDy!==undefined?labelDy:4), label, 'small', anchor||'start'); }
+  g.addEventListener('click',()=>onSwitchClick(id));
+  switchEls[id]={g,blade,x1,y1,x2,y2};
+  deviceLayer.appendChild(g);
+}
+
+const breakerEls = {};
+function drawBreaker(id,cx,cy,label,labelDy,motor){
+  const g = el('g',{class:'breaker-hit','data-brk':id});
+  const s=15;
+  const rect = el('rect',{x:cx-s,y:cy-s,width:s*2,height:s*2,fill:'#141a24','stroke-width':2.5,rx:3},g);
+  const diag1 = el('line',{x1:cx-s+3,y1:cy-s+3,x2:cx+s-3,y2:cy+s-3,'stroke-width':2},g);
+  const diag2 = el('line',{x1:cx-s+3,y1:cy+s-3,x2:cx+s-3,y2:cy-s+3,'stroke-width':2},g);
+  if(motor){
+    el('circle',{cx:cx-s-14,cy:cy,r:9,fill:'#141a24',stroke:'#c8cfd8','stroke-width':1.5},g);
+    const mt=el('text',{x:cx-s-14,y:cy+3.5,'text-anchor':'middle','font-size':10,fill:'#c8cfd8'},g);
+    mt.textContent='M';
+    el('line',{x1:cx-s-14,y1:cy-9,x2:cx-s,y2:cy,stroke:'#5a6478','stroke-width':1.2},g);
+  }
+  const hit = el('rect',{x:cx-s-22,y:cy-s-8,width:s*2+30,height:s*2+16,fill:'transparent'},g);
+  if(label){ text(cx+s+8, cy+(labelDy!==undefined?labelDy:4), label, 'small'); }
+  g.addEventListener('click',()=>onBreakerClick(id));
+  breakerEls[id]={g,rect,diag1,diag2};
+  deviceLayer.appendChild(g);
+}
+
+/* ---------- build static (non-interactive) wiring & symbols ---------- */
+function buildStatic(){
+  // Source A stub + PT tap
+  wire('srcA_stub', `M ${SRC_A_X} ${Y_STUB0} L ${SRC_A_X} ${Y_SWTOP}`);
+  el('line',{x1:SRC_A_X-22,y1:Y_STUB0+8,x2:SRC_A_X,y2:Y_STUB0+8,stroke:'#5a6478','stroke-width':1.5},wireLayer);
+  el('line',{x1:SRC_A_X-14,y1:Y_STUB0+2,x2:SRC_A_X-14,y2:Y_STUB0+14,stroke:'#5a6478','stroke-width':1.5},wireLayer);
+  el('line',{x1:SRC_A_X-9,y1:Y_STUB0+2,x2:SRC_A_X-9,y2:Y_STUB0+14,stroke:'#5a6478','stroke-width':1.5},wireLayer);
+  text(SRC_A_X-96,10,'138kV Source A','title');
+  text(SRC_A_X-96,24,'(Potential Transformers)','small');
+
+  // Source B stub + PT tap
+  wire('srcB_stub', `M ${SRC_B_X} ${Y_STUB0} L ${SRC_B_X} ${Y_SWTOP}`);
+  el('line',{x1:SRC_B_X,y1:Y_STUB0+8,x2:SRC_B_X+22,y2:Y_STUB0+8,stroke:'#5a6478','stroke-width':1.5},wireLayer);
+  el('line',{x1:SRC_B_X+14,y1:Y_STUB0+2,x2:SRC_B_X+14,y2:Y_STUB0+14,stroke:'#5a6478','stroke-width':1.5},wireLayer);
+  el('line',{x1:SRC_B_X+9,y1:Y_STUB0+2,x2:SRC_B_X+9,y2:Y_STUB0+14,stroke:'#5a6478','stroke-width':1.5},wireLayer);
+  text(SRC_B_X+18,10,'138kV Ring Tie','title');
+  text(SRC_B_X+18,24,'(Normally Closed)','small');
+
+  // merge wires down to Y_MERGE then across to MID_X
+  wire('mergeA', `M ${SRC_A_X} ${Y_SWBOT} L ${SRC_A_X} ${Y_MERGE} L ${MID_X} ${Y_MERGE}`);
+  wire('mergeB', `M ${SRC_B_X} ${Y_SWBOT} L ${SRC_B_X} ${Y_MERGE} L ${MID_X} ${Y_MERGE}`);
+
+  // trunk connector wires
+  wire('trunk1', `M ${MID_X} ${Y_MERGE} L ${MID_X} ${Y_S2_TOP}`);
+  wire('trunk2', `M ${MID_X} ${Y_S2_BOT} L ${MID_X} ${Y_B1_TOP}`);
+  wire('trunk3', `M ${MID_X} ${Y_B1_BOT} L ${MID_X} ${Y_CT1}`);
+  // CT1 symbol (decorative donut)
+  el('circle',{cx:MID_X,cy:Y_CT1+12,r:9,fill:'none',stroke:'#5a6478','stroke-width':1.6},wireLayer);
+  text(MID_X+16,Y_CT1+16,'Bushing CTs','small');
+  wire('trunk4', `M ${MID_X} ${Y_CT1+21} L ${MID_X} ${Y_XFMR_TOP}`);
+
+  // transformer symbol: two coils
+  el('circle',{cx:MID_X,cy:Y_XFMR_TOP+16,r:16,fill:'none',stroke:'#5a6478','stroke-width':1.8},wireLayer);
+  el('circle',{cx:MID_X,cy:Y_XFMR_BOT-16,r:16,fill:'none',stroke:'#5a6478','stroke-width':1.8},wireLayer);
+  text(MID_X+24,Y_XFMR_TOP+20,'138kV : 12kV','small');
+  text(MID_X+24,Y_XFMR_TOP+34,'Power Transformer','small');
+  wire('trunk5', `M ${MID_X} ${Y_XFMR_BOT} L ${MID_X} ${Y_S3_TOP}`);
+  wire('trunk6', `M ${MID_X} ${Y_S3_BOT} L ${MID_X} ${Y_MAINBUS}`);
+
+  // Main bus
+  wire('mainbus', `M ${BUS_L} ${Y_MAINBUS} L ${BUS_R} ${Y_MAINBUS}`);
+  el('rect',{x:BUS_L-4,y:Y_MAINBUS-3,width:BUS_R-BUS_L+8,height:6,fill:'#232a35',opacity:0.001}); // spacer no-op
+  text(BUS_R+8,Y_MAINBUS+4,'MAIN BUS','title');
+
+  // station service (decorative, non-interactive) tap off main bus
+  const SS_X = 130;
+  wire('ss1', `M ${SS_X} ${Y_MAINBUS} L ${SS_X} ${Y_MAINBUS+34}`);
+  el('circle',{cx:SS_X,cy:Y_MAINBUS+46,r:11,fill:'none',stroke:'#3a4250','stroke-width':1.6},wireLayer);
+  el('circle',{cx:SS_X,cy:Y_MAINBUS+62,r:11,fill:'none',stroke:'#3a4250','stroke-width':1.6},wireLayer);
+  text(SS_X-56,Y_MAINBUS+58,'Station','small');
+  text(SS_X-56,Y_MAINBUS+70,'Service','small');
+
+  // feeders
+  FX.forEach((x,i)=>{
+    const n=i+1;
+    wire('f'+n+'_a', `M ${x} ${Y_FTOP_TOP} L ${x} ${Y_FTOP_BOT}`, );
+    wire('f'+n+'_b', `M ${x} ${Y_CT2} L ${x} ${Y_R_TOP}`);
+    el('circle',{cx:x,cy:Y_CT2-8,r:8,fill:'none',stroke:'#5a6478','stroke-width':1.5},wireLayer);
+    wire('f'+n+'_c', `M ${x} ${Y_R_BOT} L ${x} ${Y_FBOT_TOP}`);
+    wire('f'+n+'_d', `M ${x} ${Y_FBOT_BOT} L ${x} ${Y_TBUS}`);
+    wire('f'+n+'_load', `M ${x} ${Y_TBUS} L ${x} ${Y_LOAD}`);
+    text(x, Y_LOAD+16, '12kV Circuit', 'small','middle');
+    text(x, Y_LOAD+29, '#120'+n, 'small','middle');
+  });
+
+  // transfer bus base line (between feeder taps only, ties drawn as switches)
+  wire('tbus_l', `M ${BUS_L} ${Y_TBUS} L ${FX[0]-16} ${Y_TBUS}`);
+  wire('tbus_r', `M ${FX[2]+16} ${Y_TBUS} L ${BUS_R} ${Y_TBUS}`);
+  text(BUS_R+8,Y_TBUS+4,'TRANSFER BUS','title');
+}
+
+function buildInteractive(){
+  // source switches (vertical)
+  drawSwitch('s1', SRC_A_X, Y_SWTOP, SRC_A_X, Y_SWBOT, 'Gang Sw. S1', -108, -6);
+  drawSwitch('salt', SRC_B_X, Y_SWTOP, SRC_B_X, Y_SWBOT, 'Tie Sw.', 10, -6);
+  // disconnects & gang switches on trunk
+  drawTrunkSwitch('s2', Y_S2_TOP, Y_S2_BOT, 'Disconnect S2');
+  drawTrunkSwitch('s3', Y_S3_TOP, Y_S3_BOT, 'Gang Sw. S3');
+
+  drawBreaker('b1', MID_X, (Y_B1_TOP+Y_B1_BOT)/2, 'Motor Circuit Switcher', 6, true);
+
+  FX.forEach((x,i)=>{
+    const n=i+1;
+    drawFeederSwitch(x,'f'+n+'_top', Y_FTOP_TOP, Y_FTOP_BOT, n===1?'left':(n===3?'right':'left'));
+    drawBreaker('r'+n, x, (Y_R_TOP+Y_R_BOT)/2, 'R'+n, 5, false);
+    drawFeederSwitch(x,'f'+n+'_bot', Y_FBOT_TOP, Y_FBOT_BOT, n===1?'left':(n===3?'right':'left'));
+  });
+
+  // ties on transfer bus (horizontal switches)
+  const tx1 = (FX[0]+FX[1])/2, tx2=(FX[1]+FX[2])/2;
+  drawSwitch('tie12', FX[0]+16, Y_TBUS, FX[1]-16, Y_TBUS, 'Tie 1–2 (N.O.)', -6, -8,'middle');
+  drawSwitch('tie23', FX[1]+16, Y_TBUS, FX[2]-16, Y_TBUS, 'Tie 2–3 (N.O.)', -6, -8,'middle');
+}
+
+function drawTrunkSwitch(id,yTop,yBot,label){
+  drawSwitch(id, MID_X, yTop, MID_X, yBot, label, 10, ((yTop+yBot)/2 - yTop)+4);
+}
+function drawFeederSwitch(x,id,yTop,yBot,side){
+  const dx = side==='right' ? -80 : 10;
+  const anchor = side==='right' ? 'end' : 'start';
+  drawSwitch(id, x, yTop, x, yBot, id.includes('top')?'Disc.':'Disc.', dx, ((yTop+yBot)/2-yTop)+4, anchor);
+}
+
+buildStatic();
+buildInteractive();
+
+/* fault target markers (fixed positions per zone) */
+const zonePos = { main:{x:MID_X+70,y:(Y_B1_TOP+Y_XFMR_BOT)/2}, f1:{x:FX[0]-58,y:(Y_R_TOP+Y_R_BOT)/2},
+  f2:{x:FX[1]-58,y:(Y_R_TOP+Y_R_BOT)/2}, f3:{x:FX[2]+22,y:(Y_R_TOP+Y_R_BOT)/2} };
+const faultMarkerEls={};
+Object.keys(zonePos).forEach(z=>{
+  const p=zonePos[z];
+  const g=el('g',{opacity:0,'pointer-events':'none'},faultLayer);
+  el('circle',{cx:p.x,cy:p.y,r:11,fill:'none','stroke-width':2.4},g);
+  const t=el('text',{x:p.x,y:p.y+4,'text-anchor':'middle','font-size':13,'font-weight':'bold'},g);
+  t.textContent='⚡';
+  faultMarkerEls[z]={g,circle:g.firstChild,text:t};
+});
+
+/* ---------- logic ---------- */
+function computeEnergized(){
+  const e={};
+  e.afterS1 = sw.s1.closed;
+  e.afterSalt = sw.salt.closed;
+  e.atJ = e.afterS1 || e.afterSalt;
+  e.afterS2 = e.atJ && sw.s2.closed;
+  e.afterB1 = e.afterS2 && sw.b1.closed && !sw.b1.tripped;
+  e.afterS3 = e.afterB1 && sw.s3.closed;
+  e.mainBus = e.afterS3;
+  [1,2,3].forEach(n=>{
+    e['f'+n+'_top'] = e.mainBus && sw['f'+n+'_top'].closed;
+    e['f'+n+'_brk'] = e['f'+n+'_top'] && sw['r'+n].closed && !sw['r'+n].tripped;
+    e['f'+n+'_bot'] = e['f'+n+'_brk'] && sw['f'+n+'_bot'].closed;
+  });
+  let T=[e.f1_bot, e.f2_bot, e.f3_bot];
+  for(let pass=0;pass<3;pass++){
+    if(sw.tie12.closed) T[0]=T[1]=(T[0]||T[1]);
+    if(sw.tie23.closed) T[1]=T[2]=(T[1]||T[2]);
+  }
+  e.load1=T[0]; e.load2=T[1]; e.load3=T[2];
+  return e;
+}
+
+function log(msg,cls){
+  const box=document.getElementById('log');
+  const row=document.createElement('div');
+  row.className='entry'+(cls?(' '+cls):'');
+  const now=new Date();
+  const ts=now.toLocaleTimeString([], {hour12:false});
+  row.innerHTML='<span class="ts">'+ts+'</span>'+msg;
+  box.appendChild(row);
+  box.scrollTop=box.scrollHeight;
+}
+
+function onSwitchClick(id){
+  const s=sw[id];
+  s.closed=!s.closed;
+  log((s.closed?'CLOSED ':'OPENED ')+switchDisplayName(id));
+  renderNow();
+}
+function switchDisplayName(id){
+  const names={s1:'Source A Gang Switch S1', salt:'Ring Tie Switch', s2:'Disconnect S2',
+    s3:'Gang Switch S3', tie12:'Transfer Bus Tie 1–2', tie23:'Transfer Bus Tie 2–3',
+    f1_top:'Feeder 1 Top Disconnect', f1_bot:'Feeder 1 Bottom Disconnect',
+    f2_top:'Feeder 2 Top Disconnect', f2_bot:'Feeder 2 Bottom Disconnect',
+    f3_top:'Feeder 3 Top Disconnect', f3_bot:'Feeder 3 Bottom Disconnect'};
+  return names[id]||id;
+}
+function onBreakerClick(id){
+  const b=sw[id];
+  if(b.tripped){
+    b.tripped=false; b.closed=false;
+    log(DEVICE_LABEL[id]+' RESET to open — inspect before closing.', 'clear');
+  } else {
+    b.closed=!b.closed;
+    log((b.closed?'CLOSED ':'OPENED ')+DEVICE_LABEL[id]);
+  }
+  renderNow();
+}
+
+document.getElementById('btnInsertFault').addEventListener('click',()=>{
+  const zone=document.getElementById('faultZone').value;
+  if(faults[zone]){ log('Fault already present on '+ZONE_LABEL[zone]+'.'); return; }
+  faults[zone]=true; faultTimers[zone]=0;
+  log('⚡ FAULT INSERTED on '+ZONE_LABEL[zone]+'.', 'fault');
+  renderNow();
+});
+document.getElementById('btnClearFaults').addEventListener('click',()=>{
+  let any=false;
+  Object.keys(faults).forEach(z=>{ if(faults[z]) any=true; faults[z]=false; faultTimers[z]=0; });
+  if(any) log('All faults cleared (repaired).', 'clear');
+  else log('No faults to clear.');
+  renderFaultsPanel();
+  renderNow();
+});
+document.getElementById('btnReset').addEventListener('click',()=>{
+  Object.keys(sw).forEach(id=>{
+    const s=sw[id];
+    if(id==='tie12'||id==='tie23'){ s.closed=false; }
+    else { s.closed=true; }
+    if(s.type==='brk') s.tripped=false;
+  });
+  Object.keys(faults).forEach(z=>{ faults[z]=false; faultTimers[z]=0; });
+  document.getElementById('log').innerHTML='';
+  log('System reset to normal configuration.', 'clear');
+  renderNow();
+});
+
+function clearFaultSingle(zone){
+  faults[zone]=false; faultTimers[zone]=0;
+  log('Fault cleared on '+ZONE_LABEL[zone]+' (repaired).', 'clear');
+  renderNow();
+}
+
+/* ---------- render ---------- */
+let flashOn=false, dashPhase=0;
+function paintWire(key,energizedBool,faultBool){
+  const els=wireEls[key]; if(!els) return;
+  els.forEach(p=>{
+    if(faultBool && energizedBool){
+      p.setAttribute('stroke', flashOn ? '#ff4444' : '#7a1f1f');
+      p.setAttribute('stroke-dasharray','none');
+    } else if(energizedBool){
+      p.setAttribute('stroke','#39d98a');
+      p.setAttribute('stroke-dasharray','6 5');
+      p.setAttribute('stroke-dashoffset', -dashPhase);
+    } else {
+      p.setAttribute('stroke','#4a5568');
+      p.setAttribute('stroke-dasharray','none');
+    }
+  });
+}
+
+function paintSwitch(id,energized){
+  const sObj=switchEls[id]; if(!sObj) return;
+  const s=sw[id];
+  const {g,blade,x1,y1,x2,y2}=sObj;
+  let bx2=x2, by2=y2;
+  if(!s.closed){
+    const dx=x2-x1, dy=y2-y1;
+    const len=Math.sqrt(dx*dx+dy*dy)*0.7;
+    const ang=Math.atan2(dy,dx)-0.7;
+    bx2=x1+Math.cos(ang)*len; by2=y1+Math.sin(ang)*len;
+  }
+  blade.setAttribute('x2',bx2); blade.setAttribute('y2',by2);
+  blade.setAttribute('stroke', energized ? '#39d98a' : (s.closed ? '#c8cfd8' : '#6a7484'));
+}
+
+function paintBreaker(id,energized){
+  const b=breakerEls[id]; const s=sw[id]; if(!b) return;
+  let col;
+  if(s.tripped) col='#ff4444';
+  else if(!s.closed) col='#6a7484';
+  else col = energized ? '#39d98a' : '#c8cfd8';
+  b.rect.setAttribute('stroke',col);
+  b.diag1.setAttribute('stroke',col);
+  b.diag2.setAttribute('stroke',col);
+  b.rect.setAttribute('fill', s.tripped ? 'rgba(255,68,68,0.12)' : (s.closed?'rgba(57,217,138,0.06)':'#141a24'));
+}
+
+function renderFaultsPanel(){
+  const box=document.getElementById('faultsPanel');
+  const active=Object.keys(faults).filter(z=>faults[z]);
+  if(active.length===0){ box.innerHTML='<div class="empty">No faults on the system.</div>'; return; }
+  box.innerHTML='';
+  active.forEach(z=>{
+    const row=document.createElement('div');
+    row.className='row';
+    const dev=sw[ZONE_DEVICE[z]];
+    const status = dev.tripped ? 'isolated — device tripped' : (dev.closed ? 'LIVE — device still closed' : 'isolated — device open');
+    row.innerHTML='<span class="fname">'+ZONE_LABEL[z]+' <span style="color:var(--text-dim)">('+status+')</span></span>';
+    const btn=document.createElement('button');
+    btn.textContent='Clear';
+    btn.style.fontSize='10.5px'; btn.style.padding='4px 8px';
+    btn.addEventListener('click',()=>clearFaultSingle(z));
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+}
+
+function renderNow(){
+  const e=computeEnergized();
+
+  paintWire('mergeA', e.afterS1);
+  paintWire('mergeB', e.afterSalt);
+  paintWire('trunk1', e.atJ);
+  paintWire('trunk2', e.afterS2, faults.main);
+  paintWire('trunk3', e.afterB1, faults.main);
+  paintWire('trunk4', e.afterB1, faults.main);
+  paintWire('trunk5', e.afterS3);
+  paintWire('trunk6', e.afterS3);
+  paintWire('mainbus', e.mainBus);
+  paintWire('ss1', e.mainBus);
+
+  [1,2,3].forEach(n=>{
+    const fz='f'+n;
+    paintWire(fz+'_a', e[fz+'_top']);
+    paintWire(fz+'_b', e[fz+'_top'], faults[fz]);
+    paintWire(fz+'_c', e[fz+'_brk'], faults[fz]);
+    paintWire(fz+'_d', e[fz+'_bot']);
+    paintWire(fz+'_load', e['load'+n]);
+  });
+  paintWire('tbus_l', e.load1 || e.load2);
+  paintWire('tbus_r', e.load2 || e.load3);
+
+  Object.keys(switchEls).forEach(id=>{
+    if(!switchEls[id]) return;
+    let energized;
+    if(id==='s1') energized=e.afterS1;
+    else if(id==='salt') energized=e.afterSalt;
+    else if(id==='s2') energized=e.afterS2;
+    else if(id==='s3') energized=e.afterS3;
+    else if(id==='tie12') energized=e.load1||e.load2;
+    else if(id==='tie23') energized=e.load2||e.load3;
+    else if(id.startsWith('f1_top')) energized=e.f1_top;
+    else if(id.startsWith('f2_top')) energized=e.f2_top;
+    else if(id.startsWith('f3_top')) energized=e.f3_top;
+    else if(id.startsWith('f1_bot')) energized=e.f1_bot;
+    else if(id.startsWith('f2_bot')) energized=e.f2_bot;
+    else if(id.startsWith('f3_bot')) energized=e.f3_bot;
+    paintSwitch(id,energized);
+  });
+  paintBreaker('b1', e.afterS2);
+  paintBreaker('r1', e.f1_top);
+  paintBreaker('r2', e.f2_top);
+  paintBreaker('r3', e.f3_top);
+
+  // fault markers
+  Object.keys(faultMarkerEls).forEach(z=>{
+    const fm=faultMarkerEls[z];
+    if(!faults[z]){ fm.g.setAttribute('opacity',0); return; }
+    const dev=sw[ZONE_DEVICE[z]];
+    const live = dev.closed && !dev.tripped;
+    fm.g.setAttribute('opacity',1);
+    const col = live ? (flashOn?'#ff4444':'#7a1f1f') : '#c07a2a';
+    fm.circle.setAttribute('stroke',col);
+    fm.text.setAttribute('fill',col);
+  });
+
+  // load lamps (draw once, update color) -- create lazily
+  drawLoadLamp(1, e.load1); drawLoadLamp(2, e.load2); drawLoadLamp(3, e.load3);
+
+  renderFaultsPanel();
+}
+
+const loadLamps={};
+function drawLoadLamp(n,energized){
+  const x=FX[n-1];
+  if(!loadLamps[n]){
+    loadLamps[n]=el('circle',{cx:x,cy:Y_LOAD-6,r:5},faultLayer);
+  }
+  loadLamps[n].setAttribute('fill', energized ? '#39d98a' : '#3a4250');
+}
+
+/* ---------- main loop ---------- */
+function tick(){
+  const e=computeEnergized();
+  const upstream={ main:e.afterS2, f1:e.f1_top, f2:e.f2_top, f3:e.f3_top };
+  Object.keys(faults).forEach(z=>{
+    if(!faults[z]){ faultTimers[z]=0; return; }
+    const dev=sw[ZONE_DEVICE[z]];
+    if(upstream[z] && dev.closed && !dev.tripped){
+      faultTimers[z]+=TICK_MS;
+      if(faultTimers[z]>=TRIP_MS){
+        dev.tripped=true; dev.closed=false; faultTimers[z]=0;
+        log('⚠ '+DEVICE_LABEL[ZONE_DEVICE[z]]+' TRIPPED — fault detected on '+ZONE_LABEL[z]+'.', 'trip');
+      }
+    } else {
+      faultTimers[z]=0;
+    }
+  });
+  flashOn=!flashOn;
+  dashPhase=(dashPhase+3)%1000;
+  renderNow();
+}
+setInterval(tick, TICK_MS);
+renderNow();
+log('System initialized — normal configuration, all sources connected.');
+
+})();
+</script>
+</body>
+</html>

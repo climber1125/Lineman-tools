@@ -1,0 +1,543 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!-- Ferroresonance Arcade. © 2026 Caleb Lenz. All rights reserved. Not for redistribution. -->
+<title>Ferroresonance Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: one 16:9 arcade screen scaled to fit, CRT scanlines over it, touch controls under it on phones. Single committed dark look (matches the cabinet art). */
+:root{
+  --night:#0b0716; --deep:#120a24; --violet:#2b1450; --magenta:#a3216a; --hot:#e2452e; --amber:#ff9a1f; --sun:#ffd23a; --cyan:#7fe7ff; --white:#f6f2ff;
+  --f-pixel:"Press Start 2P","Courier New",monospace;
+  --f-body:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--night);color:var(--white);font-family:var(--f-body);overflow:hidden;touch-action:manipulation}
+.wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding-inline:16px;padding-block:8px;box-sizing:border-box}
+.screen{position:relative;width:min(100%, calc((100% - 0px) * 1));aspect-ratio:16/9;max-width:100%;background:#000;border-radius:14px;overflow:hidden;box-shadow:0 0 0 3px #000,0 0 40px rgba(226,69,46,.25)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:auto}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,.18) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.45) 100%)}
+.pad{display:none;width:100%;max-width:560px;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,minmax(0,1fr))}
+@media (pointer:coarse),(max-width:700px){.pad{display:grid}}
+.pad button{font-family:var(--f-pixel);font-size:10px;line-height:1.3;color:var(--white);background:var(--deep);border:2px solid var(--violet);border-radius:12px;min-height:54px;padding:6px 4px;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.pad button:active{background:var(--violet)}
+.pad .b1{background:var(--hot);border-color:var(--sun);color:#1a0b00}
+.pad .b2{background:var(--amber);border-color:var(--sun);color:#1a0b00}
+.pad .b3{background:var(--cyan);border-color:var(--white);color:#04161b}
+.pad button:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.hint{font-family:var(--f-body);font-size:14px;color:#a99cc9;text-align:center;max-width:70ch}
+@media (pointer:coarse),(max-width:700px){.hint{display:none}}
+</style>
+
+<div class="wrap" id="wrap">
+  <div class="screen" id="screen"><canvas id="cv" width="960" height="540" aria-label="Ferroresonance arcade game"></canvas></div>
+  <div class="pad" id="pad">
+    <button type="button" id="pL" data-a="left">◀</button>
+    <button type="button" id="pR" data-a="right">▶</button>
+    <button type="button" id="pU" data-a="up">▲▼</button>
+    <button type="button" id="p1" class="b1" data-a="b1">OPERATE</button>
+    <button type="button" id="p2" class="b2" data-a="b2">MAIN</button>
+    <button type="button" id="p3" class="b3" data-a="b3">GANG</button>
+  </div>
+  <div class="hint">Keyboard: ← → select a cutout · Space operate · 2 homes' main breaker · 3 gang switch · ↓ on the title screen tests your controls. iCade controllers work as-is.</div>
+</div>
+
+<script>
+// Ferroresonance engine — per-unit, illustrative.
+// Open phase: Thevenin series loop  e = vc + dλ/dt ,  C·dvc/dt = im(λ) + vL/R
+// Closed phase: vL = source,  dλ/dt = vL - λ/τdc (residual flux decays slowly)
+const PH = [0, -2.0944, 2.0944];
+const KNEE = 1.4, ARR_FAIL = 1, TAU_H = 300, FUSE_TRIP = 2.25;
+const RW = 0.04; // winding resistance, bleeds trapped charge
+const DRIVE = { gwye: 0.05, fwye: 0.75, delta: 0.9 };
+// Grounded-wye padmount (URD): 4/5-leg core couples the phases magnetically, so the open phase still gets a weak back-feed.
+// Grounded-wye bank of single-phase pole cans (OH): no coupling path.
+const GWYE_PM = 0.5;
+// MOV arrester: stiff conduction above the clamp level keeps the open phase near 2 pu, at the cost of heat
+const CLAMP = 1.95, GA = 0.02;
+function iArr(v) { const a = Math.abs(v) / CLAMP; return a < 0.8 ? 0 : Math.sign(v) * GA * Math.pow(a, 24); }
+function im(l) { return 0.003 * l + 0.004 * Math.pow(l, 11); }
+function makeSim() {
+  return {
+    t: 0, conn: 'delta', lengthFt: 2500, loadPct: 0,
+    ph: [0, 1, 2].map(p => ({ cut: 'closed', l: -Math.cos(PH[p]), vc: Math.sin(PH[p]), vL: Math.sin(PH[p]), vg: Math.sin(PH[p]), i: 0, iF: 0, heat: 0, arr: 0, arrFailed: false })),
+    events: []
+  };
+}
+function stepSim(s, dt, log) {
+  const capFt = s.lengthFt * (s.feed === 'oh' ? 0.03 : 1); // overhead conductor: a few % of URD cable capacitance per foot
+  const Xc = 18000 / Math.max(1, capFt), C = 1 / Xc;
+  let R = s.loadPct > 0 ? 100 / s.loadPct : 60; // 60 pu ≈ core loss only
+  const pm5 = s.conn === 'gwye' && s.feed !== 'oh';
+  if (s.conn === 'gwye' && !pm5) R = Math.min(R, 2); // single-phase cans: open winding is clamped, heavily damped
+  const nOpen = s.ph.filter(p => p.cut !== 'closed').length;
+  const E = nOpen === 3 ? 0 : (pm5 ? GWYE_PM : DRIVE[s.conn]) * (nOpen === 2 ? 1.1 : 1);
+  s.t += dt;
+  const hs = s.heatScale || 1;
+  let backI = 0;
+  s.ph.forEach((p, k) => {
+    if (p.arrFailed) { p.vL = 0; p.vg = 0; p.l *= 0.99; p.i = 0; return; }
+    if (p.cut === 'closed') {
+      const v = Math.sin(s.t + PH[k]);
+      p.vL = v; p.vg = v; p.l += dt * (v - p.l * 0.01); p.vc = v;
+      p.i = im(p.l) + v / R;
+    } else {
+      const f = (l, vc) => { const e = E * Math.sin(s.t + PH[k]); const vL = e - vc - RW * im(l); return [vL, (im(l) + vL / R - iArr(vc)) / C]; };
+      const a = f(p.l, p.vc), b = f(p.l + dt / 2 * a[0], p.vc + dt / 2 * a[1]),
+        c = f(p.l + dt / 2 * b[0], p.vc + dt / 2 * b[1]), d = f(p.l + dt * c[0], p.vc + dt * c[1]);
+      p.l += dt / 6 * (a[0] + 2 * b[0] + 2 * c[0] + d[0]);
+      p.vc += dt / 6 * (a[1] + 2 * b[1] + 2 * c[1] + d[1]);
+      p.vL = E * Math.sin(s.t + PH[k]) - p.vc - RW * im(p.l);
+      p.vg = p.vc;
+      p.i = im(p.l) + p.vL / R;
+      if (s.conn !== 'gwye') backI += Math.abs(p.i); else if (pm5) backI += 0.5 * Math.abs(p.i);
+    }
+    // arrester
+    const over = Math.abs(p.vg) - KNEE;
+    if (over > 0) p.arr += (over * over * 0.03 + Math.abs(p.vg * iArr(p.vg)) * 0.2) * dt * hs; else p.arr = Math.max(0, p.arr - dt * hs * 0.0006);
+    if (p.arr >= ARR_FAIL && !p.arrFailed) {
+      p.arrFailed = true; p.arr = ARR_FAIL;
+      log && log('bad', `Arrester on phase ${'ABC'[k]} failed short to ground after absorbing ferroresonant overvoltage.`);
+      s.ph.forEach((q, j) => { if (q.cut === 'closed') q.heat = 99 * TAU_H; });
+    }
+  });
+  const nClosed = 3 - nOpen;
+  s.ph.forEach((p, k) => {
+    if (p.cut !== 'closed') { p.iF = 0; p.heat = Math.max(0, p.heat - dt * hs * p.heat / TAU_H); return; }
+    p.iF = Math.abs(p.i) + 3 * backI; // saturation spikes are large relative to a small can's fuse link
+    p.heat += dt * hs * (p.iF * p.iF - p.heat / TAU_H);
+    if (p.heat > FUSE_TRIP * TAU_H) {
+      p.cut = 'blown'; p.vc = p.vL;
+      log && log('bad', p.heat > 50 * TAU_H ? `Fuse ${'ABC'[k]} blew clearing the arrester fault.` : `Fuse ${'ABC'[k]} blew from sustained saturation current spikes.`);
+    }
+  });
+}
+
+(() => {
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const W = 960, H = 540;
+const COL = { night:'#0b0716', deep:'#120a24', violet:'#2b1450', plum:'#5a1866', magenta:'#a3216a', hot:'#e2452e', amber:'#ff9a1f', sun:'#ffd23a', cyan:'#7fe7ff', white:'#f6f2ff', ground:'#07060b', pad:'#3d5a3a', padD:'#24361f', pA:'#ff9a1f', pB:'#c58bff', pC:'#5ef0a8', dim:'#8a7fb0' };
+const PIX = '"Press Start 2P","Courier New",monospace', BODY = '"Barlow Condensed","Arial Narrow",sans-serif';
+const NAMES = 'ABC', PCOL = [COL.pA, COL.pB, COL.pC];
+const OWNER = '© 2026 CALEB LENZ. ALL RIGHTS RESERVED.';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CYC = 2*Math.PI, GAME_SPEED = 1.0; // simulated cycles per real second (slow motion so you can see it)
+
+/* ---------------- levels ---------------- */
+const LEVELS = [
+  { name:'FIRST LIGHT', mode:'restore', conn:'delta', feed:'urd', len:400, reach:0.75, homes:24,
+    brief:['The storm is over and the bank is dead.','Short run: 400 ft of URD cable.','Close A, B and C to get the lights back on.'],
+    win:'Short cable stores little energy, so the open phases had nothing to ring with.',
+    lose:'Even short cable can ring if you leave the bank single-phased long enough.' },
+  { name:'LONG RUN', mode:'restore', conn:'delta', feed:'urd', len:1800, reach:0.75, homes:32,
+    brief:['1,800 ft of URD and no load on the bank.','While a cutout is open, that phase is back-fed','into all that cable. Do not leave it single-phased.'],
+    win:'You kept the single-phase window short. The time between phases is the biggest factor.',
+    lose:'The open phases sat on long cable with no load. The core saturated every half cycle and the arrester took the hits until it failed.' },
+  { name:'PICK UP LOAD', mode:'restore', conn:'delta', feed:'urd', len:2200, reach:2.8, homes:40, loadSwitch:true, loadPct:30,
+    brief:['2,200 ft run. The bucket has to reposition','between cutouts, so you cannot be fast here.','Close the homes\' main (MAIN) first. Load damps it.'],
+    win:'Load is resistance. It burns off the energy before the cable and core can build it up.',
+    lose:'Slow switching on an empty bank is the worst case. Energize with load connected when you can.' },
+  { name:'OVERHEAD', mode:'restore', conn:'delta', feed:'oh', len:2500, reach:0.75, homes:28,
+    brief:['Same kind of bank, fed by overhead conductor.','Overhead has a few percent of the capacitance','of URD cable per foot. Feel the difference.'],
+    win:'Overhead conductor stores very little energy. Ferroresonance is mainly a URD problem.',
+    lose:'Overhead is far less prone, but not impossible on a long enough run.' },
+  { name:'TAKE IT DOWN', mode:'down', conn:'delta', feed:'urd', len:1800, reach:0.75, homes:32,
+    brief:['The bank has to come out for maintenance.','Opening one phase at a time is risky too.','Open A, B and C. Keep the gap short.'],
+    win:'De-energizing single-phase rings the same way energizing does. You kept the window short.',
+    lose:'With one or two cutouts open, the open phases rang on the cable. Opening is as risky as closing.' },
+  { name:'GROUNDED, NOT SAFE', mode:'down', conn:'gwye', feed:'urd', len:2500, reach:1.5, homes:36,
+    brief:['Grounded-wye three-phase pad-mount, 2,500 ft.','The shared 5-leg core still links the phases','magnetically. Open A, B and C.'],
+    win:'Grounding weakens the back-feed, but the shared core still coupled voltage into the open phase. Grounded wye resists ferroresonance. It is not immune.',
+    lose:'Grounded wye resists ferroresonance. It is not immune.' },
+  { name:'GANG SWITCH', mode:'restore', conn:'delta', feed:'urd', len:2500, reach:0.75, homes:48, gang:true,
+    brief:['Longest run yet: 2,500 ft, no load.','A gang-operated switch is installed.','GANG closes all three phases at once.'],
+    win:'Gang-operated switching never leaves the bank single-phased. That is the best fix there is.',
+    lose:'Single-phase switching on 2,500 ft of cable with no load is a fuse and arrester killer.' }
+];
+
+/* ---------------- audio ---------------- */
+let AC = null, hum = null, humGain = null, master = null;
+function audio(){
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination);
+    hum = AC.createOscillator(); hum.type = 'sawtooth'; hum.frequency.value = 60;
+    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500;
+    humGain = AC.createGain(); humGain.gain.value = 0;
+    hum.connect(f); f.connect(humGain); humGain.connect(master); hum.start();
+  } catch (e) { AC = null; }
+}
+function tone(freq, dur, type, vol, when){ if (!AC) return; const t = AC.currentTime + (when || 0);
+  const o = AC.createOscillator(), g = AC.createGain(); o.type = type || 'square'; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol || 0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02); }
+function noise(dur, vol, hp){ if (!AC) return; const n = Math.floor(AC.sampleRate*dur), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random()*2 - 1)*Math.pow(1 - i/n, 2);
+  const s = AC.createBufferSource(); s.buffer = b; const f = AC.createBiquadFilter(); f.type = hp ? 'highpass' : 'lowpass'; f.frequency.value = hp ? 2500 : 700;
+  const g = AC.createGain(); g.gain.value = vol; s.connect(f); f.connect(g); g.connect(master); s.start(); }
+const sfx = {
+  move: () => tone(440, 0.05, 'square', 0.04),
+  clunk: () => { tone(110, 0.12, 'square', 0.1); noise(0.06, 0.2, true); },
+  crack: () => noise(0.12, 0.35, true),
+  boom: () => { noise(0.9, 0.9, false); tone(55, 0.8, 'sawtooth', 0.15); },
+  coin: () => { tone(988, 0.08, 'square', 0.07); tone(1319, 0.25, 'square', 0.07, 0.08); },
+  clear: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.07, i*0.11)),
+  over: () => [392, 330, 262, 196].forEach((f, i) => tone(f, 0.3, 'triangle', 0.1, i*0.22)),
+  breaker: () => { tone(220, 0.08, 'square', 0.08); tone(330, 0.1, 'square', 0.06, 0.06); }
+};
+
+/* ---------------- input (keyboard, iCade, touch) ---------------- */
+const ICADE = { w:'up', x:'down', a:'left', d:'right', y:'b1', h:'b2', u:'b3', j:'b4', i:'b5', k:'b6', o:'b7', l:'b8' };
+const ICADE_UP = new Set(['e','z','q','c','t','r','f','n','m','p','g','v']);
+let lastKey = '', lastKeyT = 0;
+addEventListener('keydown', e => {
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  let a = null;
+  if (k === 'ArrowLeft') a = 'left'; else if (k === 'ArrowRight') a = 'right'; else if (k === 'ArrowUp') a = 'up'; else if (k === 'ArrowDown') a = 'down';
+  else if (k === ' ' || k === 'Enter' || k === '1') a = 'b1'; else if (k === '2') a = 'b2'; else if (k === '3') a = 'b3';
+  else if (ICADE[k]) a = ICADE[k]; else if (ICADE_UP.has(k)) { e.preventDefault(); return; }
+  lastKey = (e.key === ' ' ? 'SPACE' : e.key.toUpperCase()) + (a ? ' = ' + a.toUpperCase() : ''); lastKeyT = performance.now();
+  if (!a) return; e.preventDefault(); if (e.repeat && a.startsWith('b')) return; press(a);
+});
+document.querySelectorAll('#pad button').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); let a = b.dataset.a;
+  if (a === 'up') a = state === 'initials' ? 'up' : 'down'; press(a); }));
+cv.addEventListener('pointerdown', e => { // tap a cutout on the screen, or tap anywhere to continue
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left)/r.width*W, y = (e.clientY - r.top)/r.height*H;
+  if (state === 'play' && y > 80 && y < 220) { const k = CUT_X.findIndex(cx => Math.abs(x - cx) < 26); if (k >= 0) { sel = k; press('b1'); return; } }
+  if (state !== 'play') press('b1');
+});
+
+/* ---------------- high scores ---------------- */
+const HS_KEY = 'ferroArcadeHi';
+const DEFAULT_HS = [['ARC',9000],['GND',7000],['URD',5000],['CUT',3500],['FUS',2000],['OHL',1000]];
+function loadHS(){ try { const v = JSON.parse(localStorage.getItem(HS_KEY)); if (Array.isArray(v) && v.length) return v; } catch (e) {} return DEFAULT_HS.slice(); }
+function saveHS(){ try { localStorage.setItem(HS_KEY, JSON.stringify(hs)); } catch (e) {} }
+let hs = loadHS();
+
+/* ---------------- game state ---------------- */
+let state = 'attract', stT = 0, attractPhase = 0;
+let lvl = 0, score = 0, lives = 3, sel = 0, reach = 0, reachK = -1;
+let sim = null, pending = [false,false,false], openAt = [null,null,null], buf = [], acc = 0;
+let stats = null, result = null, loadOn = false, endT = 0, shake = 0, particles = [], flashT = 0;
+let initials = ['A','A','A'], iPos = 0, demo = null;
+const BUF = 260, SAMP = 0.05;
+
+function newSim(L, demoMode){
+  const s = makeSim(); s.heatScale = 4; s.conn = L.conn; s.feed = L.feed; s.lengthFt = L.len; s.loadPct = 0;
+  if (L.mode === 'restore') s.ph.forEach(p => { p.cut = 'open'; p.vc = 0; p.vg = 0; p.vL = 0; p.i = 0; p.l = (Math.random() < .5 ? -1 : 1)*(0.6 + Math.random()*0.2); });
+  else { const w = CYC*(1 + Math.random()); for (let t = 0; t < w; t += 0.004) stepSim(s, 0.004); }
+  return s;
+}
+function startLevel(){
+  const L = LEVELS[lvl]; sim = newSim(L); pending = [false,false,false]; openAt = [null,null,null]; buf = []; acc = 0;
+  sel = 0; reach = 0; reachK = -1; loadOn = false; particles = []; endT = 0;
+  stats = { sp:0, ring:0, peak:0, loadFirst:false, gang:false, firstOp:false, arrOn:[false,false,false] };
+  if (L.mode === 'restore') stats.started = true;
+}
+function go(s){ state = s; stT = 0; }
+
+function press(a){
+  audio();
+  if (state === 'attract') { if (a === 'down') { go('test'); return; } if (a.startsWith('b')) { sfx.coin(); lvl = 0; score = 0; lives = 3; startLevel(); go('brief'); } return; }
+  if (state === 'test') { if (a === 'up') go('attract'); return; }
+  if (state === 'brief') { if (a.startsWith('b') && stT > 0.4) { go('play'); } return; }
+  if (state === 'result') { if (a.startsWith('b') && stT > 1.0) nextAfterResult(); return; }
+  if (state === 'over' || state === 'win') { if (a.startsWith('b') && stT > 1.5) toInitialsOrAttract(); return; }
+  if (state === 'initials') {
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (a === 'up' || a === 'down') { const c = A.indexOf(initials[iPos]); initials[iPos] = A[(c + (a === 'up' ? 1 : 25)) % 26]; sfx.move(); }
+    else if (a === 'left') iPos = Math.max(0, iPos - 1); else if (a === 'right') iPos = Math.min(2, iPos + 1);
+    else if (a.startsWith('b')) { if (iPos < 2) { iPos++; sfx.move(); } else { hs.push([initials.join(''), score]); hs.sort((x, y) => y[1] - x[1]); hs = hs.slice(0, 8); saveHS(); sfx.clear(); go('attract'); } }
+    return;
+  }
+  if (state !== 'play') return;
+  const L = LEVELS[lvl];
+  if (a === 'left') { sel = (sel + 2) % 3; sfx.move(); }
+  else if (a === 'right') { sel = (sel + 1) % 3; sfx.move(); }
+  else if (a === 'b1') { if (reach > 0 || sim.ph[sel].arrFailed || sim.ph[sel].cut === 'blown' || pending[sel]) return; reach = L.reach; reachK = sel; }
+  else if (a === 'b2' && L.loadSwitch) { loadOn = !loadOn; sim.loadPct = loadOn ? L.loadPct : 0; sfx.breaker(); if (loadOn && !stats.firstOp) stats.loadFirst = true; }
+  else if (a === 'b3' && L.gang) { if (reach > 0) return; gangOperate(); }
+}
+function operate(k){
+  const p = sim.ph[k]; stats.firstOp = true; sfx.clunk();
+  if (p.cut === 'closed') pending[k] = true;
+  else { p.cut = 'closed'; p.heat = 0; openAt[k] = null; p.l = -Math.cos(sim.t + PH[k]);
+    [0,1,2].forEach(j => { if (sim.ph[j].cut !== 'closed' && !sim.ph[j].arrFailed) openAt[j] = sim.t; }); }
+}
+function gangOperate(){
+  const L = LEVELS[lvl]; stats.firstOp = true; stats.gang = true; sfx.clunk(); sfx.clunk();
+  sim.ph.forEach((p, k) => { if (L.mode === 'restore') { if (p.cut !== 'closed') { p.cut = 'closed'; p.heat = 0; p.l = -Math.cos(sim.t + PH[k]); openAt[k] = null; } } else if (p.cut === 'closed') pending[k] = true; });
+}
+
+/* ---------------- simulation tick ---------------- */
+function peakOf(k, span){ let m = 0; for (let j = Math.max(0, buf.length - span); j < buf.length; j++) m = Math.max(m, Math.abs(buf[j][k])); return m; }
+function simTick(s, dt, pend, oAt, onLog){
+  const rad = GAME_SPEED*CYC*dt, n = Math.max(1, Math.round(rad/0.004)), d = rad/n;
+  for (let j = 0; j < n; j++) {
+    pend.forEach((pd, k) => { if (pd && Math.abs(Math.sin(s.t + PH[k])) > 0.97) { pend[k] = false; s.ph[k].cut = 'open'; oAt[k] = s.t; } });
+    stepSim(s, d, onLog);
+  }
+}
+function playTick(dt){
+  const L = LEVELS[lvl];
+  if (reach > 0) { reach -= dt; if (reach <= 0) { reach = 0; operate(reachK); reachK = -1; } }
+  simTick(sim, dt, pending, openAt, () => {});
+  const before = buf.length; acc += GAME_SPEED*CYC*dt; while (acc >= SAMP) { acc -= SAMP; buf.push(sim.ph.map(p => p.vg || 0)); } if (buf.length > BUF) buf.splice(0, buf.length - BUF);
+  const open = [0,1,2].filter(k => sim.ph[k].cut !== 'closed' && !sim.ph[k].arrFailed);
+  const live = sim.ph.some(p => p.cut === 'closed') && open.length > 0;
+  const cyc = Math.ceil(CYC/SAMP);
+  let ringing = false;
+  if (live) { stats.sp += dt;
+    open.forEach(k => { if (openAt[k] !== null && (sim.t - openAt[k]) > CYC*1.5) { const pk = peakOf(k, cyc); stats.peak = Math.max(stats.peak, pk); if (pk > 1.3) ringing = true; } }); }
+  if (ringing) stats.ring += dt;
+  stats.ringing = ringing; stats.live = live;
+  // arrester conduction sparks + sound
+  sim.ph.forEach((p, k) => { const on = Math.abs(p.vg) > KNEE && !p.arrFailed;
+    if (on && !stats.arrOn[k]) { sfx.crack(); spark(TX[k], 268, 6, COL.cyan); } stats.arrOn[k] = on; });
+  // hum follows saturation
+  if (humGain) { const sat = Math.max(0, ...open.map(k => Math.abs(sim.ph[k].l) - 0.6)); humGain.gain.setTargetAtTime(Math.min(0.18, sat*0.25), AC.currentTime, 0.05); hum.frequency.setTargetAtTime(60 + Math.min(1.5, sat)*80, AC.currentTime, 0.1); }
+  // end conditions
+  const failed = sim.ph.some(p => p.arrFailed || p.cut === 'blown');
+  if (failed) { if (!endT) { endT = 0.0001; sfx.boom(); shake = 1; const k = Math.max(0, sim.ph.findIndex(p => p.arrFailed)); spark(TX[k], 260, 40, COL.sun); spark(TX[k], 260, 30, COL.hot); flashT = 0.25; } endT += dt; if (endT > 2.0) finishLevel(false); return; }
+  const done = L.mode === 'restore' ? sim.ph.every(p => p.cut === 'closed') : sim.ph.every(p => p.cut !== 'closed') && !pending.some(Boolean);
+  if (done && reach === 0) { endT += dt; if (endT > 1.4) finishLevel(true); } else endT = 0;
+}
+function finishLevel(ok){
+  const L = LEVELS[lvl]; if (humGain) humGain.gain.setTargetAtTime(0, AC.currentTime, 0.05);
+  const lines = [];
+  if (ok) {
+    lines.push([L.mode === 'restore' ? `${L.homes} HOMES RESTORED` : 'BANK CLEARED SAFELY', 1000]);
+    const spB = Math.max(0, Math.round(1500 - 300*stats.sp)); lines.push([`SINGLE-PHASE ${stats.sp.toFixed(1)}S`, spB]);
+    if (stats.ring > 0) lines.push([`RINGING ${stats.ring.toFixed(1)}S`, -Math.round(200*stats.ring)]); else lines.push(['CLEAN SWITCHING', 500]);
+    if (stats.loadFirst) lines.push(['LOAD PICKED UP FIRST', 1000]);
+    if (stats.gang) lines.push(['GANG-OPERATED', 2000]);
+    sfx.clear();
+  } else { lines.push([sim.ph.some(p => p.arrFailed) ? 'ARRESTER FAILED' : 'FUSE BLOWN', 0]); lives--; sfx.over(); }
+  const total = Math.max(0, lines.reduce((a, l) => a + l[1], 0));
+  result = { ok, lines, total, peak: stats.peak, shown: 0 };
+  score += total; go('result');
+}
+function nextAfterResult(){
+  if (!result.ok) { if (lives <= 0) { go('over'); return; } startLevel(); go('brief'); return; }
+  lvl++; if (lvl >= LEVELS.length) { go('win'); return; } startLevel(); go('brief');
+}
+function toInitialsOrAttract(){ if (score > 0 && (hs.length < 8 || score > hs[hs.length - 1][1])) { initials = ['A','A','A']; iPos = 0; go('initials'); } else go('attract'); }
+
+/* ---------------- particles ---------------- */
+function spark(x, y, n, c){ if (reduced) n = Math.min(n, 4); for (let i = 0; i < n; i++) { const a = Math.random()*CYC, v = 60 + Math.random()*220; particles.push({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 80, t: 0.5 + Math.random()*0.6, c }); } }
+function stepParticles(dt){ particles.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 400*dt; p.t -= dt; }); particles = particles.filter(p => p.t > 0); }
+
+/* ---------------- drawing ---------------- */
+const CUT_X = [150, 200, 250], TX = [520, 610, 700];
+function text(s, x, y, size, color, align, font){ ctx.font = `${size}px ${font || PIX}`; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); }
+function outlined(s, x, y, size, fill, align){ ctx.font = `${size}px ${PIX}`; ctx.textAlign = align || 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(4, size/5); ctx.strokeStyle = '#000'; ctx.strokeText(s, x, y); ctx.fillStyle = fill; ctx.fillText(s, x, y); }
+function titleGrad(y0, y1){ const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#fff3b0'); g.addColorStop(.45, COL.sun); g.addColorStop(.6, COL.amber); g.addColorStop(1, COL.hot); return g; }
+function wrapText(s, x, y, maxW, lh, size, color, align){ ctx.font = `${size}px ${BODY}`; const words = s.split(' '); let line = '', yy = y;
+  words.forEach(w => { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { text(line, x, yy, size, color, align, BODY); line = w; yy += lh; } else line = t; }); if (line) text(line, x, yy, size, color, align, BODY); return yy; }
+
+function sky(){
+  const bands = [[0,COL.deep],[90,COL.violet],[150,COL.plum],[195,COL.magenta],[230,COL.hot],[262,COL.amber]];
+  bands.forEach(([y, c], i) => { ctx.fillStyle = c; ctx.fillRect(0, y, W, (bands[i+1] ? bands[i+1][0] : 300) - y); });
+  // striped sun
+  ctx.save(); ctx.beginPath(); ctx.arc(820, 300, 110, Math.PI, 0); ctx.clip(); ctx.fillStyle = COL.sun; ctx.fillRect(700, 190, 240, 110);
+  ctx.fillStyle = COL.hot; [[248,5],[264,7],[282,10]].forEach(([y, h]) => ctx.fillRect(700, y, 240, h)); ctx.restore();
+  ctx.fillStyle = '#e9f6ff'; [[80,30],[300,22],[420,60],[640,35],[900,50],[360,110],[760,90]].forEach(([x, y]) => ctx.fillRect(x, y, 2, 2));
+  ctx.fillStyle = COL.ground; ctx.fillRect(0, 300, W, 90);
+  ctx.strokeStyle = 'rgba(255,122,26,.25)'; ctx.lineWidth = 1; for (let i = -8; i <= 8; i++) { ctx.beginPath(); ctx.moveTo(480 + i*20, 300); ctx.lineTo(480 + i*120, 390); ctx.stroke(); }
+}
+function sceneFor(s, opts){
+  const t = performance.now()/1000, oh = s.feed === 'oh';
+  sky();
+  // pole + crossarm
+  ctx.fillStyle = '#000'; ctx.fillRect(112, 52, 14, 340); ctx.fillRect(100, 82, 180, 10);
+  // feeder wires in from the left
+  [0,1,2].forEach(k => { ctx.strokeStyle = PCOL[k]; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 60 + k*6); ctx.quadraticCurveTo(70, 72 + k*6, CUT_X[k], 92); ctx.stroke(); });
+  // cutouts
+  [0,1,2].forEach(k => { const x = CUT_X[k], p = s.ph[k], closed = p.cut === 'closed' && !(opts && opts.pending && opts.pending[k]);
+    ctx.fillStyle = '#1b1530'; ctx.fillRect(x - 7, 96, 14, 8); ctx.fillRect(x - 7, 172, 14, 8);
+    ctx.strokeStyle = p.cut === 'blown' ? COL.hot : closed ? COL.white : COL.amber; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath();
+    if (closed) { ctx.moveTo(x, 106); ctx.lineTo(x, 170); } else { ctx.moveTo(x, 172); ctx.lineTo(x + 30, 116); } ctx.stroke();
+    text(NAMES[k], x, 222, 14, PCOL[k], 'center');
+    if (opts && opts.sel === k && Math.floor(t*4) % 2 === 0) { ctx.strokeStyle = COL.cyan; ctx.lineWidth = 3; ctx.strokeRect(x - 22, 92, 44, 96); }
+  });
+  // cable / spans to the bank
+  [0,1,2].forEach(k => { const p = s.ph[k], glow = Math.min(1, .25 + Math.abs(p.i || 0)*0.8 + Math.abs(p.vg || 0)*0.2);
+    ctx.strokeStyle = PCOL[k]; ctx.globalAlpha = glow; ctx.lineWidth = 3; ctx.beginPath();
+    if (oh) { ctx.moveTo(CUT_X[k], 180); ctx.quadraticCurveTo((CUT_X[k] + TX[k])/2, 200 + k*8, TX[k], 170); }
+    else { const y = 340 + k*9; ctx.moveTo(CUT_X[k], 180); ctx.lineTo(132 + k*4, 186); ctx.lineTo(132 + k*4, y); ctx.lineTo(TX[k] + 18, y); ctx.lineTo(TX[k] + 18, 330); }
+    ctx.stroke(); ctx.globalAlpha = 1; });
+  if (!oh) { ctx.fillStyle = '#000'; ctx.fillRect(128, 186, 16, 114); text(`${s.lengthFt.toLocaleString()} FT URD`, 300, 380, 10, COL.dim, 'left'); }
+  else { ctx.fillStyle = '#000'; ctx.fillRect(TX[1] - 6, 140, 12, 160); ctx.fillRect(TX[0] - 40, 150, TX[2] - TX[0] + 80, 8); text(`${s.lengthFt.toLocaleString()} FT OVERHEAD`, 300, 380, 10, COL.dim, 'left'); }
+  // transformers
+  [0,1,2].forEach(k => { const p = s.ph[k], x = TX[k];
+    const heat = p.cut === 'blown' || p.arrFailed ? 1 : Math.max(Math.min(1, p.heat/(FUSE_TRIP*TAU_H)), Math.min(1, p.arr/ARR_FAIL));
+    const sh = Math.abs(p.l) > 1.05 && !reduced ? (Math.random() - .5)*4 : 0;
+    const bx = x - 34 + sh, by = oh ? 168 : 262, bw = 68, bh = oh ? 70 : 68;
+    ctx.fillStyle = oh ? '#c9c4d6' : COL.pad; ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = COL.hot; ctx.fillRect(bx, by + bh*(1 - heat), bw, bh*heat);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = oh ? '#000' : COL.padD; ctx.fillRect(bx - 3, by - 5, bw + 6, 7);
+    text(NAMES[k], x + sh, by + 40, 18, '#000', 'center');
+    // arrester
+    ctx.fillStyle = p.arrFailed ? '#000' : p.arr > 0.05 ? COL.hot : '#8a8399'; ctx.fillRect(bx - 12, by + 10, 7, 26);
+    if (Math.abs(p.vg) > KNEE && !p.arrFailed) { ctx.strokeStyle = COL.cyan; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx - 9, by + 10); ctx.lineTo(bx - 22, by - 4); ctx.lineTo(bx - 14, by - 8); ctx.lineTo(bx - 28, by - 24); ctx.stroke(); }
+    const v = opts && opts.peaks ? opts.peaks[k] : Math.abs(p.vg);
+    const vtxt = p.arrFailed ? 'FAULT' : v.toFixed(1) + 'X';
+    text(vtxt, x, by - 14, 12, p.arrFailed || v > KNEE ? COL.hot : COL.white, 'center');
+  });
+  // homes
+  const lit = s.ph.filter(p => p.cut === 'closed').length;
+  [[790,0],[850,1],[910,2]].forEach(([x, n]) => { ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(x - 24, 312); ctx.lineTo(x, 292); ctx.lineTo(x + 24, 312); ctx.fill(); ctx.fillRect(x - 20, 312, 40, 26);
+    const on = lit === 3 || (lit > 0 && n < lit) ; ctx.fillStyle = on ? COL.sun : '#2a2440'; ctx.fillRect(x - 13, 318, 9, 8); ctx.fillRect(x + 4, 318, 9, 8); });
+}
+function scope(x0, y0, w, h){
+  ctx.fillStyle = '#05040a'; ctx.fillRect(x0, y0, w, h); ctx.strokeStyle = COL.violet; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, w, h);
+  const ym = y0 + h/2, sc = (h/2 - 6)/3, Y = v => ym - Math.max(-3, Math.min(3, v))*sc;
+  ctx.fillStyle = 'rgba(94,240,168,.07)'; ctx.fillRect(x0, Y(1), w, Y(-1) - Y(1));
+  ctx.setLineDash([6, 5]); ctx.strokeStyle = COL.hot; ctx.lineWidth = 1.5; [KNEE, -KNEE].forEach(v => { ctx.beginPath(); ctx.moveTo(x0, Y(v)); ctx.lineTo(x0 + w, Y(v)); ctx.stroke(); }); ctx.setLineDash([]);
+  text('ARRESTER', x0 + w - 6, Y(KNEE) - 4, 8, COL.hot, 'right'); text('3X', x0 + 6, y0 + 12, 8, COL.dim); text('1X', x0 + 6, Y(1) - 3, 8, COL.dim);
+  const n = buf.length; if (n < 2) return;
+  [0,1,2].forEach(k => { ctx.strokeStyle = PCOL[k]; ctx.lineWidth = 2.5; ctx.beginPath(); buf.forEach((s, j) => { const x = x0 + w*(j + BUF - n)/BUF; j ? ctx.lineTo(x, Y(s[k])) : ctx.moveTo(x, Y(s[k])); }); ctx.stroke(); });
+}
+function hud(){
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, 34);
+  text('SCORE', 14, 14, 8, COL.dim); text(String(score).padStart(6, '0'), 14, 29, 12, COL.white);
+  text('HI', 200, 14, 8, COL.dim); text(String(Math.max(score, hs[0] ? hs[0][1] : 0)).padStart(6, '0'), 200, 29, 12, COL.sun);
+  text(`LEVEL ${lvl + 1}`, 480, 14, 8, COL.dim, 'center'); text(LEVELS[lvl].name, 480, 29, 10, COL.amber, 'center');
+  text('ARRESTERS', W - 14, 14, 8, COL.dim, 'right');
+  for (let i = 0; i < 3; i++) { ctx.fillStyle = i < lives ? COL.cyan : '#2a2440'; ctx.fillRect(W - 24 - i*18, 19, 8, 12); }
+}
+function drawPlay(dt){
+  const L = LEVELS[lvl];
+  const cyc = Math.ceil(CYC/SAMP), pk = [0,1,2].map(k => peakOf(k, cyc));
+  ctx.save(); if (shake > 0 && !reduced) ctx.translate((Math.random() - .5)*14*shake, (Math.random() - .5)*14*shake);
+  sceneFor(sim, { sel, pending, peaks: pk });
+  // hot stick reaching for the cutout
+  if (reach > 0) { const f = 1 - reach/L.reach, x = CUT_X[reachK]; ctx.strokeStyle = '#d9c38a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(40, 300); ctx.lineTo(40 + (x + 8 - 40)*f, 300 + (176 - 300)*f); ctx.stroke(); }
+  // main breaker
+  if (L.loadSwitch) { ctx.fillStyle = loadOn ? COL.sun : '#2a2440'; ctx.fillRect(760, 350, 120, 26); ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(760, 350, 120, 26); text(loadOn ? 'MAIN ON' : 'MAIN OFF', 820, 368, 9, loadOn ? '#000' : COL.dim, 'center'); }
+  particles.forEach(p => { ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 3, 3); });
+  ctx.restore();
+  if (flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${flashT*3})`; ctx.fillRect(0, 0, W, H); }
+  // banner
+  const failed = sim.ph.some(p => p.arrFailed || p.cut === 'blown');
+  let msg = '', c = COL.white;
+  if (failed) { msg = sim.ph.some(p => p.arrFailed) ? 'ARRESTER FAILED!' : 'FUSE BLOWN!'; c = COL.hot; }
+  else if (stats.ringing) { msg = 'FERRORESONANCE!'; c = Math.floor(performance.now()/180) % 2 ? COL.hot : COL.sun; }
+  else if (stats.live) { msg = 'SINGLE-PHASED'; c = COL.amber; }
+  else if (endT > 0) { msg = L.mode === 'restore' ? 'BANK ENERGIZED' : 'BANK CLEARED'; c = COL.cyan; }
+  if (msg) outlined(msg, 480, 74, 20, c);
+  // scope + timers
+  scope(14, 396, 932, 112);
+  text(`SINGLE-PHASE ${stats.sp.toFixed(1)}S`, 20, 410, 8, stats.sp > 2 ? COL.hot : COL.amber);
+  text(`RINGING ${stats.ring.toFixed(1)}S`, 260, 410, 8, stats.ring > 0 ? COL.hot : COL.dim);
+  const ctl = ['◀ ▶ PICK CUTOUT', 'OPERATE'].concat(L.loadSwitch ? ['MAIN'] : []).concat(L.gang ? ['GANG'] : []);
+  text(ctl.join('   ·   '), 480, 530, 9, COL.dim, 'center');
+  hud();
+}
+function panel(x, y, w, h){ ctx.fillStyle = 'rgba(11,7,22,.92)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = COL.amber; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); }
+function blink(s, y, c){ if (Math.floor(performance.now()/450) % 2 === 0) text(s, 480, y, 12, c || COL.sun, 'center'); }
+
+function drawAttract(dt){
+  // demo bank ringing behind the title
+  if (!demo || demo.t > 22) { const s = makeSim(); s.heatScale = 4; s.conn = 'delta'; s.feed = 'urd'; s.lengthFt = 1800; s.loadPct = 0;
+    demo = { s, pend:[false,false,false], oAt:[null,null,null], t:0, opened:false }; }
+  demo.t += dt; if (!demo.opened && demo.t > 1.5) { demo.pend[1] = true; demo.opened = true; }
+  simTick(demo.s, dt, demo.pend, demo.oAt, (k, m) => { if (state === 'attract' && AC) sfx.crack(); });
+  sceneFor(demo.s, { pending: demo.pend });
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, W, H);
+  attractPhase = Math.floor(stT/6) % 2;
+  ctx.save(); ctx.translate(480, 150); ctx.transform(1, 0, -0.12, 1, 0, 0);
+  ctx.font = `44px ${PIX}`; ctx.textAlign = 'center'; ctx.lineWidth = 10; ctx.strokeStyle = '#000'; ctx.strokeText('FERRO', 0, -10); ctx.strokeText('RESONANCE', 0, 50);
+  ctx.fillStyle = titleGrad(-50, 60); ctx.fillText('FERRO', 0, -10); ctx.fillText('RESONANCE', 0, 50); ctx.restore();
+  text('NEVER SINGLE-PHASE THE BANK', 480, 88, 10, COL.cyan, 'center');
+  if (attractPhase === 0) {
+    blink('PRESS START', 290);
+    text('BUTTON 1 STARTS  ·  JOYSTICK DOWN TESTS CONTROLS', 480, 330, 8, COL.dim, 'center');
+  } else {
+    panel(300, 230, 360, 170); text('HIGH SCORES', 480, 258, 12, COL.amber, 'center');
+    hs.slice(0, 6).forEach(([n, v], i) => { text(`${i + 1}. ${n}`, 350, 284 + i*18, 10, i ? COL.white : COL.sun); text(String(v).padStart(6, '0'), 610, 284 + i*18, 10, i ? COL.white : COL.sun, 'right'); });
+  }
+  text('TRAINING GAME. YOUR UTILITY\'S SWITCHING PROCEDURES COME FIRST.', 480, 500, 8, COL.white, 'center');
+  text(OWNER, 480, 522, 8, COL.dim, 'center');
+}
+function drawTest(){
+  ctx.fillStyle = COL.deep; ctx.fillRect(0, 0, W, H);
+  outlined('CONTROL CHECK', 480, 90, 22, COL.sun);
+  text('Press each control. The screen shows the key your controller sent.', 480, 140, 22, COL.white, 'center', BODY);
+  panel(280, 180, 400, 120);
+  const fresh = performance.now() - lastKeyT < 1500;
+  text(fresh ? lastKey : 'WAITING…', 480, 250, 16, fresh ? COL.cyan : COL.dim, 'center');
+  text('iCade map: stick = W X A D, buttons = Y H U J I K O L', 480, 350, 20, COL.dim, 'center', BODY);
+  text('Button 1 operates · Button 2 main breaker · Button 3 gang switch', 480, 380, 20, COL.dim, 'center', BODY);
+  blink('JOYSTICK UP TO EXIT', 460, COL.amber);
+}
+function drawBrief(){
+  const L = LEVELS[lvl];
+  sceneFor(sim, {}); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, 0, W, H);
+  panel(170, 110, 620, 300);
+  text(`LEVEL ${lvl + 1}`, 480, 150, 12, COL.dim, 'center'); outlined(L.name, 480, 192, 24, COL.sun);
+  L.brief.forEach((l, i) => text(l, 480, 240 + i*30, 26, COL.white, 'center', BODY));
+  text(`HOT STICK REACH ${L.reach.toFixed(1)}S PER CUTOUT`, 480, 352, 8, COL.dim, 'center');
+  if (stT > 0.4) blink('PRESS BUTTON', 390);
+  hud();
+}
+function drawResult(dt){
+  const L = LEVELS[lvl], r = result; r.shown = Math.min(r.total, r.shown + Math.max(40, r.total*dt*1.5));
+  sceneFor(sim, { pending }); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H);
+  panel(120, 52, 720, 440);
+  outlined(r.ok ? 'BANK SECURE' : (lives > 0 ? 'ARRESTER DOWN' : 'LAST ARRESTER'), 480, 100, 24, r.ok ? COL.cyan : COL.hot);
+  r.lines.forEach(([l, v], i) => { text(l, 180, 150 + i*26, 11, COL.white); text((v > 0 ? '+' : '') + v, 780, 150 + i*26, 11, v < 0 ? COL.hot : COL.sun, 'right'); });
+  const yt = 150 + r.lines.length*26 + 8; ctx.fillStyle = COL.violet; ctx.fillRect(180, yt - 6, 600, 2);
+  text('LEVEL TOTAL', 180, yt + 18, 11, COL.amber); text('+' + Math.round(r.shown), 780, yt + 18, 12, COL.sun, 'right');
+  if (r.peak > 0) text(`PEAK ON THE OPEN PHASE: ${r.peak.toFixed(1)}X NORMAL`, 180, yt + 46, 9, r.peak > KNEE ? COL.hot : COL.dim);
+  wrapText(r.ok ? L.win : L.lose, 480, yt + 84, 620, 28, 26, COL.white, 'center');
+  if (stT > 1.0) blink(r.ok ? (lvl + 1 < LEVELS.length ? 'PRESS BUTTON FOR NEXT LEVEL' : 'PRESS BUTTON') : (lives > 0 ? 'PRESS BUTTON TO RETRY' : 'PRESS BUTTON'), 472);
+  hud();
+}
+function drawEnd(win){
+  ctx.fillStyle = COL.deep; ctx.fillRect(0, 0, W, H); sky(); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, 0, W, H);
+  outlined(win ? 'SHIFT COMPLETE' : 'GAME OVER', 480, 170, 34, win ? COL.sun : COL.hot);
+  text(`FINAL SCORE ${score}`, 480, 240, 14, COL.white, 'center');
+  wrapText(win ? 'Every bank restored. The fix that always works: never leave a URD bank single-phased with no load.' : 'Out of arresters. Close fast, pick up load first, and use gang-operated switching when you have it.', 480, 300, 680, 30, 28, COL.white, 'center');
+  if (stT > 1.5) blink('PRESS BUTTON', 440);
+}
+function drawInitials(){
+  ctx.fillStyle = COL.deep; ctx.fillRect(0, 0, W, H);
+  outlined('NEW HIGH SCORE', 480, 130, 26, COL.sun); text(String(score), 480, 180, 16, COL.white, 'center');
+  initials.forEach((c, i) => { const x = 400 + i*80; ctx.fillStyle = i === iPos ? COL.violet : '#000'; ctx.fillRect(x - 30, 230, 60, 70); ctx.strokeStyle = i === iPos ? COL.cyan : COL.violet; ctx.lineWidth = 3; ctx.strokeRect(x - 30, 230, 60, 70); text(c, x, 280, 30, COL.white, 'center'); });
+  text('UP/DOWN CHANGES · BUTTON NEXT', 480, 360, 10, COL.dim, 'center');
+}
+
+/* ---------------- loop ---------------- */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last)/1000); last = now; stT += dt;
+  shake = Math.max(0, shake - dt*1.5); flashT = Math.max(0, flashT - dt); stepParticles(dt);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
+  if (state === 'attract') drawAttract(dt);
+  else if (state === 'test') drawTest();
+  else if (state === 'brief') drawBrief();
+  else if (state === 'play') { playTick(dt); if (state === 'play') drawPlay(dt); else drawResult(0); }
+  else if (state === 'result') drawResult(dt);
+  else if (state === 'over') drawEnd(false);
+  else if (state === 'win') drawEnd(true);
+  else if (state === 'initials') drawInitials();
+  if (state !== 'play' && humGain) humGain.gain.setTargetAtTime(0, AC.currentTime, 0.05);
+  requestAnimationFrame(frame);
+}
+function fitScreen(){ const wrap = document.getElementById('wrap'), pad = document.getElementById('pad'), hint = document.querySelector('.hint');
+  const availH = wrap.clientHeight - 16 - (pad.offsetParent ? pad.offsetHeight + 10 : 0) - (hint.offsetParent ? hint.offsetHeight + 10 : 0);
+  const availW = wrap.clientWidth - 32; const w = Math.max(200, Math.min(availW, availH*16/9));
+  document.getElementById('screen').style.width = w + 'px'; }
+addEventListener('resize', fitScreen); fitScreen();
+// hidden test hooks for automated checks
+window.__arcade = { get state(){ return state; }, get lvl(){ return lvl; }, get score(){ return score; }, get lives(){ return lives; }, press, get sim(){ return sim; } };
+const fontsIn = document.fonts ? Promise.all([document.fonts.load('12px "Press Start 2P"'), document.fonts.load('600 20px "Barlow Condensed"')]) : Promise.resolve();
+Promise.race([fontsIn, new Promise(r => setTimeout(r, 1500))]).catch(() => {}).then(() => requestAnimationFrame(frame));
+})();
+</script>
+
+</body></html>

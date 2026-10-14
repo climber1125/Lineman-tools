@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lineman Training Tools</title>
+<style>
+:root{
+  --bg:#0d1117;--card:#161b22;--line:#2a313c;--text:#e6e9ee;--dim:#9aa4b2;
+  --amber:#ffb020;--green:#39d98a;--blue:#5aa9ff;--red:#ff6b6b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
+.wrap{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+header h1{margin:0 0 6px;font-size:30px;letter-spacing:.01em}
+header p{margin:0;color:var(--dim);font-size:17px}
+.howto{margin:20px 0 26px;padding:16px 18px;background:#1b2330;border:1px solid var(--line);
+  border-left:5px solid var(--amber);border-radius:10px;font-size:17px}
+.howto b{color:var(--amber)}
+.howto ol{margin:8px 0 0;padding-left:22px}
+.howto li{margin:4px 0}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:30px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;
+  display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font-size:20px}
+.card p{margin:0;color:var(--dim);font-size:15.5px;flex:1}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;border:1px solid currentColor;width:max-content}
+.t-class{color:var(--green)}.t-sim{color:var(--blue)}.t-game{color:var(--amber)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+a.open{flex:1;text-align:center;text-decoration:none;font-weight:700;font-size:18px;
+  background:var(--green);color:#06210f;padding:14px 12px;border-radius:9px;min-width:150px}
+a.open:hover{filter:brightness(1.08)}
+a.dl{text-align:center;text-decoration:none;font-size:14px;color:var(--text);
+  border:1px solid var(--line);padding:14px 12px;border-radius:9px}
+a.dl:hover,button.link:hover{background:#1f2630}
+button.link{background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:14px}
+.share{margin-top:34px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+#qr{background:#fff;padding:10px;border-radius:8px;width:180px;height:180px}
+.share p{margin:4px 0;color:var(--dim);font-size:16px}
+.share b{color:var(--text)}
+#url{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--amber);word-break:break-all}
+button.copy{margin-top:8px;font-size:15px;padding:10px 14px;border-radius:8px;border:1px solid var(--line);
+  background:#1f2630;color:var(--text);cursor:pointer}
+footer{margin-top:30px;color:var(--dim);font-size:13px}
+@media print{.share button{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⚡ Lineman Training Tools</h1>
+    <p>Classroom tools for pre-apprentice linemen. Tap a green button to open one.</p>
+  </header>
+
+  <div class="howto">
+    <b>How to use this page</b>
+    <ol>
+      <li>Find the tool you want below.</li>
+      <li>Tap the big green <b>Open</b> button. It opens in your web browser — nothing to install, no login.</li>
+      <li>To project it, open it on the classroom computer and press <b>F11</b> for full screen (press F11 again to exit).</li>
+      <li>Only need one tool? Tap <b>Copy link</b> on it and text or email just that link.</li>
+      <li>No internet in the room? Tap <b>Save copy</b> ahead of time. Double-click the saved file later and it works offline.</li>
+    </ol>
+  </div>
+
+  <h2>Classroom lessons</h2>
+  <div class="grid">
+    <div class="card"><span class="tag t-class">Lesson + game</span>
+      <h3>AC Load Basics</h3>
+      <p>Sine waves made simple. Resistive, inductive and capacitive loads — see current lead or lag voltage.</p>
+      <div class="btns"><a class="open" href="ac-load/" target="_blank">Open</a><a class="dl" href="ac-load/index.html" download="ac-load.html">Save copy</a><button class="dl link" data-slug="ac-load">Copy link</button></div></div>
+
+    <div class="card"><span class="tag t-class">Lesson + game</span>
+      <h3>Transformer Vector Basics</h3>
+      <p>Phase arrows, bank connections (Wye, Delta, High-Leg), voltmeter readings and the 30° shift.</p>
+      <div class="btns"><a class="open" href="vectors/" target="_blank">Open</a><a class="dl" href="vectors/index.html" download="vectors.html">Save copy</a><button class="dl link" data-slug="vectors">Copy link</button></div></div>
+
+    <div class="card"><span class="tag t-class">Lesson + game</span>
+      <h3>Ferroresonance Simulator</h3>
+      <p>What ferroresonance is, what causes it, and how to avoid it when switching transformers.</p>
+      <div class="btns"><a class="open" href="ferroresonance/" target="_blank">Open</a><a class="dl" href="ferroresonance/index.html" download="ferroresonance.html">Save copy</a><button class="dl link" data-slug="ferroresonance">Copy link</button></div></div>
+
+    <div class="card"><span class="tag t-class">Lab</span>
+      <h3>AC Load Lab</h3>
+      <p>Projector console for AC loads — scope, phasors, power triangle and meter, all live as you change the load.</p>
+      <div class="btns"><a class="open" href="ac-lab/" target="_blank">Open</a><a class="dl" href="ac-lab/index.html" download="ac-lab.html">Save copy</a><button class="dl link" data-slug="ac-lab">Copy link</button></div></div>
+  </div>
+
+  <h2>Simulators</h2>
+  <div class="grid">
+    <div class="card"><span class="tag t-sim">Simulator</span>
+      <h3>Circuit One-Line — Legs A/B/C</h3>
+      <p>Insert faults, watch devices trip and meters go dark, then isolate and backfeed through the ties.</p>
+      <div class="btns"><a class="open" href="one-line/" target="_blank">Open</a><a class="dl" href="one-line/index.html" download="one-line.html">Save copy</a><button class="dl link" data-slug="one-line">Copy link</button></div></div>
+
+    <div class="card"><span class="tag t-sim">Simulator</span>
+      <h3>Substation Single-Line</h3>
+      <p>Three-feeder substation. Fault a feeder, open the disconnects around it, and pick up its load through the transfer bus.</p>
+      <div class="btns"><a class="open" href="substation/" target="_blank">Open</a><a class="dl" href="substation/index.html" download="substation.html">Save copy</a><button class="dl link" data-slug="substation">Copy link</button></div></div>
+  </div>
+
+  <h2>Games</h2>
+  <div class="grid">
+    <div class="card"><span class="tag t-game">Arcade</span>
+      <h3>Ferroresonance Arcade</h3>
+      <p>Arcade-style version of the ferroresonance lesson. Good for a review day or a quick competition.</p>
+      <div class="btns"><a class="open" href="arcade/" target="_blank">Open</a><a class="dl" href="arcade/index.html" download="arcade.html">Save copy</a><button class="dl link" data-slug="arcade">Copy link</button></div></div>
+  </div>
+
+  <div class="share">
+    <div id="qr" aria-label="QR code for this page"></div>
+    <div>
+      <p><b>Share the whole page</b></p>
+      <p>Point a phone camera at the square to open this page.</p>
+      <p>Or send this link:<br><span id="url"></span></p>
+      <button class="copy" id="copyBtn">Copy link</button>
+    </div>
+  </div>
+
+  <footer>Training aids only — always follow your utility's procedures and your foreman's direction. © Caleb Lenz</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  var url = location.href.split('#')[0].replace(/index\.html$/,'');
+  document.getElementById('url').textContent = url;
+  try { new QRCode(document.getElementById('qr'), {text:url, width:160, height:160}); }
+  catch(e){ document.getElementById('qr').style.display='none'; }
+  function copy(b,text,label){
+    function done(){ b.textContent='Copied ✓'; setTimeout(function(){b.textContent=label;},1800); }
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function(){ prompt('Copy this link:', text); });
+    else prompt('Copy this link:', text);
+  }
+  document.getElementById('copyBtn').addEventListener('click', function(){ copy(this,url,'Copy link'); });
+  document.querySelectorAll('button.link').forEach(function(b){
+    b.addEventListener('click', function(){ copy(b, url + b.dataset.slug + '/', 'Copy link'); });
+  });
+})();
+</script>
+</body>
+</html>

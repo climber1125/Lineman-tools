@@ -1,0 +1,696 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>AC Load Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: projector console. Left = the circuit you change, right = what the line sees (scope, phasors, power triangle, meter). */
+:root{
+  --bg:#e9eef0; --panel:#fbfcfc; --panel-2:#e1e8eb; --line:#c3cdd2; --ink:#12202a; --muted:#56666f; --grid:#dde4e7;
+  --v:#a86b0c; --i:#0b7ca0; --p:#b0457a; --r:#c25a17; --l:#6a48cc; --c:#1d8656;
+  --hot:#c4372f; --neu:#7b8990; --accent:#0b7ca0; --warn:#b3261e;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1114; --panel:#11191d; --panel-2:#1a252b; --line:#27363d; --ink:#e2ebee; --muted:#8c9da5; --grid:#1d2a30;
+  --v:#f2c230; --i:#48cde8; --p:#e56ea6; --r:#f28c40; --l:#a88dff; --c:#52d39c;
+  --hot:#ef5b4f; --neu:#bcc6cb; --accent:#48cde8; --warn:#ff6b5e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1114; --panel:#11191d; --panel-2:#1a252b; --line:#27363d; --ink:#e2ebee; --muted:#8c9da5; --grid:#1d2a30;
+  --v:#f2c230; --i:#48cde8; --p:#e56ea6; --r:#f28c40; --l:#a88dff; --c:#52d39c;
+  --hot:#ef5b4f; --neu:#bcc6cb; --accent:#48cde8; --warn:#ff6b5e; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.4}
+.app{max-width:1500px;margin:0 auto;padding-inline:16px;padding-block:12px 24px;display:flex;flex-direction:column;gap:12px}
+kbd{font-family:var(--f-mono);font-size:11px;padding:1px 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted);margin-left:6px}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,.elm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:700;font-size:34px;letter-spacing:.02em;margin:0;line-height:1;text-wrap:balance}
+.brand .sub{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn[aria-pressed="true"] kbd{color:var(--bg);border-color:var(--bg)}
+.btn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.btn.primary kbd{color:var(--bg);border-color:var(--bg)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.speed{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.speed input{width:110px;accent-color:var(--accent)}
+
+.prompt{background:var(--panel-2);border-radius:8px;padding:10px 14px;font-size:17px;font-weight:500;min-height:44px;display:flex;align-items:center;gap:10px}
+.prompt b{font-family:var(--f-display);font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:1000px){.grid{grid-template-columns:minmax(340px,440px) minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0;font-size:15px;color:var(--muted)}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:7px 12px;font-weight:600;cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.seg button[aria-selected="true"] kbd{color:var(--bg);border-color:var(--bg)}
+.src{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);font-weight:600}
+select{font:inherit;font-family:var(--f-mono);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+
+#circ{width:100%;height:auto;display:block}
+#circ text{font-family:var(--f-mono);fill:var(--ink)}
+#circ .lbl{font-size:13px}
+#circ .tag{font-size:11px;fill:var(--muted)}
+.w{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.w-hot{stroke:var(--hot)} .w-neu{stroke:var(--neu)}
+.dot{fill:none;stroke:var(--i);stroke-width:5;stroke-linecap:round;stroke-dasharray:0.1 16}
+.sym{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.s-R{stroke:var(--r)} .s-L{stroke:var(--l)} .s-C{stroke:var(--c)}
+.knock{fill:var(--panel)}
+.elm{cursor:pointer}
+.elm .hit{fill:transparent}
+.elm.off .sym{opacity:.25}
+.elm:hover .sym{stroke-width:4}
+.xf-body{fill:var(--panel-2);stroke:var(--line);stroke-width:2}
+.term-h{fill:var(--hot)} .term-n{fill:var(--neu)}
+.jn{fill:var(--neu)}
+.blade{stroke:var(--muted);stroke-width:3;stroke-linecap:round}
+.hint{margin:6px 0 0;font-size:13px;color:var(--muted)}
+
+.erow{display:grid;grid-template-columns:auto minmax(0,1fr) 64px;grid-template-areas:"sw rng val" "sub sub sub";gap:4px 10px;align-items:center;padding-block:8px;border-top:1px solid var(--grid)}
+.erow:first-of-type{border-top:0}
+.sw{grid-area:sw;display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;min-width:120px}
+.sw input{width:18px;height:18px;accent-color:var(--k)}
+.sw .sq{width:10px;height:10px;border-radius:2px;background:var(--k)}
+.erow input[type=range]{grid-area:rng;width:100%;accent-color:var(--k)}
+.erow output{grid-area:val;font-family:var(--f-mono);font-size:15px;text-align:right;font-variant-numeric:tabular-nums}
+.erow small{grid-area:sub;color:var(--muted);font-size:12.5px;font-family:var(--f-mono)}
+.erow.off input[type=range],.erow.off output{opacity:.35}
+
+.presets .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
+.pbtn{text-align:left;background:var(--panel-2);border:1px solid transparent;border-radius:8px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.pbtn:hover{border-color:var(--accent)}
+.pbtn strong{font-weight:600}
+.pbtn span{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:600;cursor:pointer}
+.chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.chip[aria-pressed="false"]{opacity:.45}
+#scope{width:100%;height:320px;display:block;border-radius:6px}
+@media (max-width:600px){#scope{height:240px}}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-top:8px}
+#lagText{font-size:18px;font-weight:600}
+#lagText.warn{color:var(--warn)}
+.eli{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.eli span{opacity:.35;transition:opacity .2s,color .2s}
+.eli span.on{opacity:1;color:var(--ink)}
+.eli .e-lag.on{color:var(--l)} .eli .e-lead.on{color:var(--c)}
+
+.row3{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:700px){.row3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+#phasor{width:100%;height:210px;display:block;margin-top:6px}
+#tri{width:100%;height:auto;display:block;margin-top:6px}
+#tri text{font-family:var(--f-mono);font-size:12px;fill:var(--ink)}
+#tri .muted{fill:var(--muted)}
+#tri .big{font-size:34px;font-family:var(--f-display);fill:var(--muted)}
+.meter dl{margin:6px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-variant-numeric:tabular-nums}
+.meter dt{color:var(--muted);font-size:13.5px}
+.meter dd{margin:0;text-align:right;font-family:var(--f-mono);font-size:14.5px}
+.meter dt.sep,.meter dd.sep{border-top:1px solid var(--grid);padding-top:4px}
+.meter .note{grid-column:1/-1;color:var(--warn);font-size:13px}
+.masked .meter dd{color:var(--muted)}
+@media (prefers-reduced-motion: reduce){.eli span{transition:none}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>AC Load Lab</h1>
+      <span class="sub">R · X<sub>L</sub> · X<sub>C</sub> on a 60 Hz source</span>
+    </div>
+    <div class="tools">
+      <button class="btn" id="btnNew" type="button">New problem<kbd>N</kbd></button>
+      <button class="btn" id="btnPredict" type="button" aria-pressed="false">Hide answers<kbd>H</kbd></button>
+      <button class="btn primary" id="btnReveal" type="button" disabled>Reveal<kbd>Space</kbd></button>
+      <button class="btn" id="btnRun" type="button">Pause<kbd>E</kbd></button>
+      <label class="speed" for="speed">Slow-mo <input type="range" id="speed" min="0.05" max="1" step="0.05" value="0.25"></label>
+    </div>
+  </header>
+
+  <div class="prompt" id="prompt"></div>
+
+  <main class="grid">
+    <section class="col">
+      <div class="card">
+        <div class="card-h">
+          <div class="seg" role="tablist" aria-label="Circuit type">
+            <button type="button" role="tab" data-mode="series" id="tabSeries">Series<kbd>1</kbd></button>
+            <button type="button" role="tab" data-mode="parallel" id="tabParallel">Parallel<kbd>2</kbd></button>
+          </div>
+          <label class="src" for="volts">Source
+            <select id="volts">
+              <option value="120">120 V</option>
+              <option value="240" selected>240 V</option>
+              <option value="480">480 V</option>
+            </select>
+          </label>
+        </div>
+        <svg id="circ" viewBox="0 0 520 300" role="img" aria-label="Circuit diagram"></svg>
+        <p class="hint">Tap a load to switch it in or out. Blue dots show the charge sloshing back and forth.</p>
+      </div>
+
+      <div class="card" id="controls">
+        <div class="erow" data-k="R" style="--k:var(--r)">
+          <label class="sw" for="onR"><input type="checkbox" id="onR"><span class="sq"></span>Resistance R</label>
+          <input type="range" id="rngR" min="1" max="60" step="1" aria-label="Resistance in ohms">
+          <output id="valR" for="rngR"></output>
+          <small id="subR">Heaters, lights. Turns power into heat and work.</small>
+        </div>
+        <div class="erow" data-k="L" style="--k:var(--l)">
+          <label class="sw" for="onL"><input type="checkbox" id="onL"><span class="sq"></span>Inductive X<sub>L</sub></label>
+          <input type="range" id="rngL" min="1" max="60" step="1" aria-label="Inductive reactance in ohms">
+          <output id="valL" for="rngL"></output>
+          <small id="subL"></small>
+        </div>
+        <div class="erow" data-k="C" style="--k:var(--c)">
+          <label class="sw" for="onC"><input type="checkbox" id="onC"><span class="sq"></span>Capacitive X<sub>C</sub></label>
+          <input type="range" id="rngC" min="1" max="60" step="1" aria-label="Capacitive reactance in ohms">
+          <output id="valC" for="rngC"></output>
+          <small id="subC"></small>
+        </div>
+      </div>
+
+      <div class="card presets">
+        <h3>Field scenarios</h3>
+        <div class="list" id="presets"></div>
+      </div>
+    </section>
+
+    <section class="col">
+      <div class="card">
+        <div class="card-h">
+          <h2>Scope</h2>
+          <div class="chips">
+            <button type="button" class="chip" data-tr="V" aria-pressed="true"><i style="background:var(--v)"></i><span id="chipV">Voltage</span></button>
+            <button type="button" class="chip" data-tr="I" aria-pressed="true"><i style="background:var(--i)"></i><span id="chipI">Current</span></button>
+            <button type="button" class="chip" data-tr="P" aria-pressed="true"><i style="background:var(--p)"></i>Power v×i</button>
+            <button type="button" class="chip" data-tr="parts" aria-pressed="false"><i style="background:linear-gradient(90deg,var(--r),var(--l),var(--c))"></i><span id="chipParts">Parts</span><kbd>P</kbd></button>
+          </div>
+        </div>
+        <canvas id="scope" aria-label="Oscilloscope trace of voltage and current"></canvas>
+        <div class="foot">
+          <span id="lagText"></span>
+          <span class="eli" aria-hidden="true"><span class="e-lag" id="eliE">E</span><span class="e-lag" id="eliL">L</span><span class="e-lag" id="eliI">I</span> the <span class="e-lead" id="iceI">I</span><span class="e-lead" id="iceC">C</span><span class="e-lead" id="iceE">E</span> man</span>
+        </div>
+      </div>
+
+      <div class="row3">
+        <div class="card"><h3>Phasors</h3><canvas id="phasor" aria-label="Phasor diagram"></canvas></div>
+        <div class="card"><h3>Power triangle</h3><svg id="tri" viewBox="0 0 260 170" role="img" aria-label="Power triangle"></svg></div>
+        <div class="card meter"><h3>Meter</h3><dl id="meter"></dl></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const rad = d => d * Math.PI / 180;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const S = {
+  mode: 'parallel', V: 240, on: {R: true, L: true, C: false}, R: 15, XL: 20, XC: 24,
+  show: {V: true, I: true, P: true, parts: false},
+  predict: false, revealed: true, running: !reduce, speed: 0.25, t: 0,
+  prompt: 'Motors are inductive. Which wave peaks first, and by how many degrees?'
+};
+
+const PRESETS = [
+  {name: 'Water heater', tag: 'R only · unity PF', mode: 'parallel', on: {R:1,L:0,C:0}, R: 12, XL: 20, XC: 24,
+   prompt: 'Pure resistance. Where does current peak compared to voltage?'},
+  {name: 'Motor load', tag: 'R + XL · lagging', mode: 'parallel', on: {R:1,L:1,C:0}, R: 15, XL: 20, XC: 24,
+   prompt: 'Motors are inductive. Which wave peaks first, and by how many degrees?'},
+  {name: 'Cap bank alone', tag: 'XC only · leading', mode: 'parallel', on: {R:0,L:0,C:1}, R: 15, XL: 20, XC: 24,
+   prompt: 'Cap bank on a lightly loaded line. Does current lead or lag? Does it do any real work?'},
+  {name: 'Motor + cap bank', tag: 'PF correction', mode: 'parallel', on: {R:1,L:1,C:1}, R: 15, XL: 20, XC: 24,
+   prompt: 'Switch the cap bank in on the motor. What happens to line current and power factor? Now try XC = 20.'},
+  {name: 'Series motor circuit', tag: 'R + XL in series', mode: 'series', on: {R:1,L:1,C:0}, R: 16, XL: 12, XC: 24,
+   prompt: 'Series R and XL. Add the voltage drops. Why don\'t they add up to 240 V?'},
+  {name: 'Series resonance', tag: 'XL = XC · voltage rise', mode: 'series', on: {R:1,L:1,C:1}, R: 5, XL: 40, XC: 40,
+   prompt: 'XL equals XC. Look at the voltage across the inductor. Why is this dangerous on the line?'}
+];
+
+/* ---------- electrical solve ---------- */
+function solve(){
+  const V = S.V, on = S.on;
+  const r = {I: 0, theta: 0, Z: Infinity, parts: [], br: {}, fault: null, note: null};
+  if (S.mode === 'series'){
+    const R = on.R ? S.R : 0, XL = on.L ? S.XL : 0, XC = on.C ? S.XC : 0, X = XL - XC, Z = Math.hypot(R, X);
+    if (!on.R && !on.L && !on.C){ r.fault = 'Every load is bypassed: a bolted fault across the transformer.'; return fin(r); }
+    if (Z < 0.5){ r.fault = 'XL = XC with no resistance: net impedance is zero. Only the transformer limits current.'; return fin(r); }
+    r.Z = Z; r.I = V / Z; r.theta = Math.atan2(X, R) * 180 / Math.PI;
+    const ia = -r.theta;
+    if (on.R) r.parts.push({k: 'R', mag: r.I * R, ang: ia});
+    if (on.L) r.parts.push({k: 'L', mag: r.I * XL, ang: ia + 90});
+    if (on.C) r.parts.push({k: 'C', mag: r.I * XC, ang: ia - 90});
+    r.br.loop = {I: r.I, ang: ia};
+  } else {
+    const G = on.R ? 1 / S.R : 0, BL = on.L ? 1 / S.XL : 0, BC = on.C ? 1 / S.XC : 0;
+    if (!on.R && !on.L && !on.C){ r.note = 'Every cutout is open. No load, no current.'; return fin(r); }
+    if (on.R) r.parts.push({k: 'R', mag: V * G, ang: 0});
+    if (on.L) r.parts.push({k: 'L', mag: V * BL, ang: -90});
+    if (on.C) r.parts.push({k: 'C', mag: V * BC, ang: 90});
+    const Ire = V * G, Iim = V * (BC - BL);
+    r.I = Math.hypot(Ire, Iim);
+    if (r.I < 1e-9){ r.I = 0; r.note = 'Parallel resonance: current circulates between L and C. The line carries none.'; }
+    else { r.theta = -Math.atan2(Iim, Ire) * 180 / Math.PI; r.Z = V / r.I; }
+    r.parts.forEach(p => r.br[p.k] = {I: p.mag, ang: p.ang});
+    r.br.feed = {I: r.I, ang: -r.theta};
+  }
+  return fin(r);
+}
+function fin(r){
+  if (Math.abs(r.theta) < 1e-9) r.theta = 0;
+  const th = rad(r.theta);
+  r.S = S.V * r.I; r.P = r.S * Math.cos(th); r.Q = r.S * Math.sin(th);
+  r.pf = r.I > 0 ? Math.cos(th) : null;
+  return r;
+}
+
+/* ---------- formatting ---------- */
+const f1 = x => (Math.abs(x) >= 100 ? x.toFixed(0) : x.toFixed(1));
+const fA = x => f1(x) + ' A';
+const fV = x => f1(x) + ' V';
+const fPow = (x, u) => Math.abs(x) >= 1000 ? (x / 1000).toFixed(2) + ' k' + u : x.toFixed(0) + ' ' + u;
+const lagWord = th => th > 0.05 ? 'lagging' : th < -0.05 ? 'leading' : 'unity';
+const masked = () => S.predict && !S.revealed;
+const mH = X => (X / (2 * Math.PI * 60) * 1000).toFixed(1);
+const uF = X => (1e6 / (2 * Math.PI * 60 * X)).toFixed(1);
+
+/* ---------- theme colors for canvas ---------- */
+let C = {};
+function readTheme(){
+  const cs = getComputedStyle(document.documentElement);
+  ['panel','panel-2','ink','muted','grid','line','v','i','p','r','l','c','warn'].forEach(n => C[n] = cs.getPropertyValue('--' + n).trim());
+}
+
+/* ---------- circuit drawing ---------- */
+const SYM = {
+  R: 'M-30 0H-20L-16.5 -9L-9.5 9L-2.5 -9L4.5 9L11.5 -9L16 0H30',
+  L: 'M-30 0H-22a5.5 5.5 0 0 1 11 0a5.5 5.5 0 0 1 11 0a5.5 5.5 0 0 1 11 0a5.5 5.5 0 0 1 11 0H30',
+  C: 'M-30 0H-5M-5 -13V13M5 -13V13M5 0H30'
+};
+function valOf(k){ return k === 'R' ? S.R : k === 'L' ? S.XL : S.XC; }
+function nameOf(k){ return k === 'R' ? 'R' : k === 'L' ? 'XL' : 'XC'; }
+
+function elm(k, x, y, vertical){
+  const on = S.on[k];
+  const lbl = `${nameOf(k)} ${valOf(k)} Ω`;
+  const offTag = S.mode === 'series' ? 'bypassed' : 'open';
+  const knock = on ? `<rect class="knock" x="-26" y="-16" width="52" height="32"/>` : '';
+  const txt = vertical
+    ? `<text class="lbl" x="22" y="4">${lbl}</text>${on ? '' : `<text class="tag" x="22" y="20">${offTag}</text>`}`
+    : `<text class="lbl" x="0" y="34" text-anchor="middle">${lbl}</text>${on ? '' : `<text class="tag" x="0" y="-22" text-anchor="middle">${offTag}</text>`}`;
+  return `<g class="elm ${on ? '' : 'off'}" data-k="${k}" transform="translate(${x} ${y})" tabindex="0" role="button" aria-label="${lbl}, ${on ? 'in circuit' : offTag}. Press to toggle.">
+    <rect class="hit" x="-34" y="-34" width="68" height="68"/>
+    <g ${vertical ? 'transform="rotate(90)"' : ''}>${knock}<path class="sym s-${k}" d="${SYM[k]}"/></g>${txt}</g>`;
+}
+
+function buildCircuit(){
+  const s = [];
+  // pole-mount transformer can
+  s.push(`<g><rect class="xf-body" x="16" y="88" width="66" height="124" rx="12"/>
+    <rect class="xf-body" x="38" y="72" width="22" height="16" rx="3"/>
+    <text x="49" y="140" text-anchor="middle" style="font-size:15px;font-weight:500">${S.V} V</text>
+    <text x="49" y="158" text-anchor="middle" class="tag">60 Hz</text>
+    <text x="49" y="104" text-anchor="middle" class="tag">XFMR</text>
+    <line class="w w-hot" x1="82" y1="120" x2="92" y2="120"/><line class="w w-neu" x1="82" y1="180" x2="92" y2="180"/>
+    <circle class="term-h" cx="92" cy="120" r="4.5"/><circle class="term-n" cx="92" cy="180" r="4.5"/>
+    <text class="tag" x="98" y="113">X1</text><text class="tag" x="98" y="197">X2</text></g>`);
+  if (S.mode === 'series'){
+    s.push(`<path class="w w-hot" d="M92 120H130V60H490"/>`);
+    s.push(`<path class="w w-neu" d="M490 60V240H130V180H92"/>`);
+    s.push(`<path class="dot" data-b="loop" d="M92 120H130V60H490V240H130V180H92"/>`);
+    s.push(elm('R', 210, 60, false), elm('L', 310, 60, false), elm('C', 410, 60, false));
+    s.push(`<text class="tag" x="310" y="262" text-anchor="middle">one path · same current through every load</text>`);
+  } else {
+    s.push(`<path class="w w-hot" d="M92 120H130V60H430"/>`);
+    s.push(`<path class="w w-neu" d="M430 240H130V180H92"/>`);
+    s.push(`<path class="dot" data-b="feed" d="M92 120H130V60H230"/>`);
+    s.push(`<path class="dot" data-b="feed" d="M230 240H130V180H92"/>`);
+    [['R',230],['L',330],['C',430]].forEach(([k, x]) => {
+      if (S.on[k]){
+        s.push(`<path class="w w-neu" d="M${x} 60V240"/>`);
+        s.push(`<path class="dot" data-b="${k}" d="M${x} 60V240"/>`);
+      } else {
+        s.push(`<path class="w w-neu" d="M${x} 60V88"/><line class="blade" x1="${x}" y1="88" x2="${x + 16}" y2="104"/><path class="w w-neu" d="M${x} 110V240"/>`);
+      }
+      s.push(elm(k, x, 150, true));
+      s.push(`<circle class="jn" cx="${x}" cy="60" r="4"/><circle class="jn" cx="${x}" cy="240" r="4"/>`);
+    });
+    s.push(`<text class="tag" x="330" y="280" text-anchor="middle">every branch sees full voltage</text>`);
+  }
+  const svg = $('#circ');
+  svg.innerHTML = s.join('');
+  dots = [...svg.querySelectorAll('.dot')];
+  svg.querySelectorAll('.elm').forEach(g => {
+    const tog = () => { S.on[g.dataset.k] = !S.on[g.dataset.k]; update(); const n = $(`#circ .elm[data-k="${g.dataset.k}"]`); if (n) n.focus(); };
+    g.addEventListener('click', tog);
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); tog(); } });
+  });
+}
+let dots = [];
+const ampFor = I => I <= 1e-9 ? 0 : 10 + 34 * Math.min(1, I / 40);
+function updateDots(){
+  const live = !masked();
+  const wt = 2 * Math.PI * S.t;
+  dots.forEach(d => {
+    const b = RES.br[d.dataset.b];
+    if (!b || b.I <= 1e-9){ d.style.display = 'none'; return; }
+    d.style.display = '';
+    d.style.strokeDashoffset = live ? (ampFor(b.I) * Math.cos(wt + rad(b.ang))).toFixed(2) : 0;
+  });
+}
+
+/* ---------- canvas helpers ---------- */
+function fit(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {ctx, w, h};
+}
+
+/* ---------- scope ---------- */
+function drawScope(){
+  const {ctx, w, h} = fit($('#scope'));
+  const r = RES, m = masked();
+  ctx.fillStyle = C['panel-2']; ctx.fillRect(0, 0, w, h);
+  const x0 = 44, x1 = w - 12, y0 = 22, y1 = h - 26, ym = (y0 + y1) / 2, half = (y1 - y0) / 2;
+  const X = d => x0 + d / 720 * (x1 - x0);
+  ctx.font = '11px "IBM Plex Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.lineWidth = 1;
+  for (let d = 0; d <= 720; d += 90){
+    ctx.strokeStyle = C.grid; ctx.beginPath(); ctx.moveTo(X(d), y0); ctx.lineTo(X(d), y1); ctx.stroke();
+    ctx.fillStyle = C.muted; ctx.fillText(d + '°', X(d), y1 + 6);
+  }
+  ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(x0, ym); ctx.lineTo(x1, ym); ctx.stroke();
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.muted;
+  ctx.fillText('+', x0 - 8, y0 + 8); ctx.fillText('0', x0 - 8, ym); ctx.fillText('−', x0 - 8, y1 - 8);
+
+  const th = rad(r.theta), haveI = r.I > 1e-9 && !m;
+  const trace = (fn, col, lw, dash) => {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.beginPath();
+    for (let px = 0; px <= x1 - x0; px += 1.5){
+      const d = px / (x1 - x0) * 720, y = ym - fn(rad(d)) * half;
+      px ? ctx.lineTo(x0 + px, y) : ctx.moveTo(x0 + px, y);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+
+  // scaling
+  let vA = 0.85, iA = 0.6, partScale = 0;
+  const partsOn = S.show.parts && haveI && r.parts.length;
+  if (partsOn){
+    if (S.mode === 'series'){ const mx = Math.max(S.V, ...r.parts.map(p => p.mag)); vA = 0.85 * S.V / mx; partScale = 0.85 / mx; }
+    else { const mx = Math.max(r.I, ...r.parts.map(p => p.mag)); iA = 0.8 * r.I / mx; partScale = 0.8 / mx; }
+  }
+
+  // instantaneous power
+  if (S.show.P && haveI){
+    ctx.fillStyle = C.p; ctx.globalAlpha = 0.16; ctx.beginPath(); ctx.moveTo(x0, ym);
+    for (let px = 0; px <= x1 - x0; px += 1.5){ const a = rad(px / (x1 - x0) * 720); ctx.lineTo(x0 + px, ym - 0.85 * Math.sin(a) * Math.sin(a - th) * half); }
+    ctx.lineTo(x1, ym); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+    trace(a => 0.85 * Math.sin(a) * Math.sin(a - th), C.p, 1.5);
+    const avg = ym - 0.85 * Math.cos(th) / 2 * half;
+    ctx.strokeStyle = C.p; ctx.setLineDash([6, 5]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x0, avg); ctx.lineTo(x1, avg); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = C.p; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.font = '11px "IBM Plex Mono", monospace';
+    ctx.fillText('avg power', x1 - 70, avg - 2);
+  }
+  // parts
+  if (partsOn){
+    r.parts.forEach(p => trace(a => p.mag * partScale * Math.sin(a + rad(p.ang)), C[p.k.toLowerCase()], 1.8, [5, 4]));
+  }
+  if (S.show.V) trace(a => vA * Math.sin(a), C.v, 3);
+  if (S.show.I && haveI) trace(a => iA * Math.sin(a - th), C.i, 3);
+
+  // peak markers + lag bracket
+  if (haveI && S.show.V && S.show.I){
+    const vp = 90, ip = 90 + r.theta;
+    ctx.setLineDash([3, 4]); ctx.lineWidth = 1.2;
+    ctx.strokeStyle = C.v; ctx.beginPath(); ctx.moveTo(X(vp), ym - vA * half); ctx.lineTo(X(vp), y0 - 4); ctx.stroke();
+    ctx.strokeStyle = C.i; ctx.beginPath(); ctx.moveTo(X(ip), ym - iA * half); ctx.lineTo(X(ip), y0 - 4); ctx.stroke();
+    ctx.setLineDash([]);
+    if (Math.abs(r.theta) > 0.5){
+      const a = X(Math.min(vp, ip)), b = X(Math.max(vp, ip)), yb = y0 - 6;
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(a, yb); ctx.lineTo(b, yb); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '600 12px "IBM Plex Mono", monospace';
+      ctx.fillText(`θ ${Math.abs(r.theta).toFixed(1)}°`, b + 6, yb);
+    }
+  }
+  // sweep cursor
+  const phase = ((S.t * 360) % 720 + 720) % 720, xs = X(phase);
+  ctx.strokeStyle = C.muted; ctx.globalAlpha = 0.5; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xs, y0); ctx.lineTo(xs, y1); ctx.stroke(); ctx.globalAlpha = 1;
+  const a = rad(phase);
+  const dot = (y, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xs, y, 4.5, 0, 7); ctx.fill(); };
+  if (S.show.V) dot(ym - vA * Math.sin(a) * half, C.v);
+  if (S.show.I && haveI) dot(ym - iA * Math.sin(a - th) * half, C.i);
+
+  if (m){
+    ctx.fillStyle = C.i; ctx.font = '600 15px "Barlow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Current trace hidden. Make your call, then reveal.', (x0 + x1) / 2, y1 - 16);
+  } else if (r.fault || r.note){
+    ctx.fillStyle = r.fault ? C.warn : C.muted; ctx.font = '600 15px "Barlow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(r.fault ? 'FAULT' : 'No line current', (x0 + x1) / 2, y1 - 16);
+  }
+}
+
+/* ---------- phasors ---------- */
+function drawPhasor(){
+  const {ctx, w, h} = fit($('#phasor'));
+  const r = RES, m = masked();
+  ctx.clearRect(0, 0, w, h);
+  const pol = (mag, ang) => [mag * Math.cos(rad(ang)), mag * Math.sin(rad(ang))];
+  const vecs = [];
+  const haveI = r.I > 1e-9 && !m;
+  if (S.mode === 'series'){
+    vecs.push({a: [0,0], b: [S.V, 0], col: C.v, lw: 3, lab: 'V'});
+    if (haveI){
+      vecs.push({a: [0,0], b: pol(S.V * 0.6, -r.theta), col: C.i, lw: 3, lab: 'I'});
+      if (S.show.parts){ let p = [0,0]; r.parts.forEach(q => { const d = pol(q.mag, q.ang), n = [p[0] + d[0], p[1] + d[1]]; vecs.push({a: p, b: n, col: C[q.k.toLowerCase()], lw: 2, lab: 'V' + q.k, dash: true}); p = n; }); }
+    }
+  } else {
+    const ref = haveI ? Math.max(r.I, ...r.parts.map(p => p.mag)) * 1.1 : 1;
+    vecs.push({a: [0,0], b: [ref, 0], col: C.v, lw: 3, lab: 'V'});
+    if (haveI){
+      vecs.push({a: [0,0], b: pol(r.I, -r.theta), col: C.i, lw: 3, lab: 'I'});
+      if (S.show.parts){ let p = [0,0]; r.parts.forEach(q => { const d = pol(q.mag, q.ang), n = [p[0] + d[0], p[1] + d[1]]; vecs.push({a: p, b: n, col: C[q.k.toLowerCase()], lw: 2, lab: 'I' + q.k, dash: true}); p = n; }); }
+    }
+  }
+  let xs = [0], ys = [0]; vecs.forEach(v => { xs.push(v.a[0], v.b[0]); ys.push(v.a[1], v.b[1]); });
+  const minx = Math.min(...xs), maxx = Math.max(...xs), miny = Math.min(...ys), maxy = Math.max(...ys);
+  const pad = 28, bw = Math.max(maxx - minx, 1e-9), bh = Math.max(maxy - miny, 1e-9);
+  const sc = Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh);
+  const ox = (w - bw * sc) / 2 - minx * sc, oy = (h - bh * sc) / 2 + maxy * sc;
+  const P = p => [ox + p[0] * sc, oy - p[1] * sc];
+
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, oy); ctx.lineTo(w - 8, oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, 8); ctx.lineTo(ox, h - 8); ctx.stroke();
+
+  vecs.forEach(v => {
+    const [ax, ay] = P(v.a), [bx, by] = P(v.b), len = Math.hypot(bx - ax, by - ay);
+    if (len < 2) return;
+    ctx.strokeStyle = v.col; ctx.fillStyle = v.col; ctx.lineWidth = v.lw; ctx.setLineDash(v.dash ? [5, 4] : []);
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+    const ang = Math.atan2(by - ay, bx - ax), hs = v.lw === 3 ? 11 : 8;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx - hs * Math.cos(ang - 0.4), by - hs * Math.sin(ang - 0.4)); ctx.lineTo(bx - hs * Math.cos(ang + 0.4), by - hs * Math.sin(ang + 0.4)); ctx.closePath(); ctx.fill();
+    ctx.font = (v.lw === 3 ? '600 13px' : '12px') + ' "IBM Plex Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const nx = -Math.sin(ang), ny = Math.cos(ang), mx = (ax + bx) / 2, my = (ay + by) / 2, off = v.lw === 3 ? 0 : 12;
+    if (v.lw === 3) ctx.fillText(v.lab, bx + 14 * Math.cos(ang), by + 14 * Math.sin(ang));
+    else ctx.fillText(v.lab, mx + nx * off, my + ny * off);
+  });
+  if (haveI && Math.abs(r.theta) > 0.5){
+    const rr = 34;
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(ox, oy, rr, 0, rad(r.theta), r.theta < 0); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.font = '600 12px "IBM Plex Mono", monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const mid = rad(r.theta / 2);
+    ctx.fillText('θ', ox + (rr + 8) * Math.cos(mid), oy + (rr + 8) * Math.sin(mid));
+  }
+  if (m){
+    ctx.fillStyle = C.muted; ctx.font = '600 14px "Barlow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText('Where does I point?', w / 2, h - 6);
+  }
+}
+
+/* ---------- power triangle ---------- */
+function drawTri(){
+  const r = RES, svg = $('#tri');
+  if (masked()){ svg.innerHTML = `<text class="big" x="130" y="95" text-anchor="middle">? kW · ? kVAR</text>`; return; }
+  if (r.I <= 1e-9){ svg.innerHTML = `<text class="muted" x="130" y="90" text-anchor="middle">${r.fault ? 'Fault: protection operates' : 'No power flow'}</text>`; return; }
+  const P = r.P, Q = r.Q, lag = Q >= 0;
+  const ox = 22, yb = lag ? 140 : 28;
+  const sc = Math.min(140 / Math.max(P, 1e-9), 100 / Math.max(Math.abs(Q), 1e-9));
+  const px = ox + P * sc, qy = yb - Q * sc;
+  const qCol = lag ? 'var(--l)' : 'var(--c)';
+  const qTxt = Math.abs(Q) < 0.5 ? '0 VAR' : fPow(Math.abs(Q), 'VAR');
+  svg.innerHTML = `
+    <path d="M${ox} ${yb}L${px} ${yb}L${px} ${qy}Z" style="fill:var(--accent);opacity:.08"/>
+    <line x1="${ox}" y1="${yb}" x2="${px}" y2="${yb}" style="stroke:var(--r);stroke-width:3.5;stroke-linecap:round"/>
+    <line x1="${px}" y1="${yb}" x2="${px}" y2="${qy}" style="stroke:${qCol};stroke-width:3.5;stroke-linecap:round"/>
+    <line x1="${ox}" y1="${yb}" x2="${px}" y2="${qy}" style="stroke:var(--ink);stroke-width:2.5;stroke-linecap:round"/>
+    <text x="${ox + Math.max(P * sc, 60) / 2}" y="${lag ? yb + 18 : yb - 8}" text-anchor="middle" style="fill:var(--r)">P ${fPow(P, 'W')}</text>
+    <text x="${Math.max(px, 80) + 8}" y="${(yb + qy) / 2 + 4}" style="fill:${qCol}">Q ${qTxt}</text>
+    <text x="${Math.max(px, 80) + 8}" y="${(yb + qy) / 2 + 20}" class="muted">${lag ? (Q > 0.5 ? 'inductive' : '') : 'capacitive'}</text>
+    <text x="${ox}" y="${lag ? 16 : 166}" class="muted">S ${fPow(r.S, 'VA')} · PF ${r.pf.toFixed(2)}</text>`;
+}
+
+/* ---------- meter ---------- */
+function renderMeter(){
+  const r = RES, m = masked(), q = v => m ? '?' : v;
+  const rows = [];
+  const row = (k, v, sep) => rows.push(`<dt${sep ? ' class="sep"' : ''}>${k}</dt><dd${sep ? ' class="sep"' : ''}>${v}</dd>`);
+  const ok = r.I > 1e-9;
+  if (S.mode === 'series'){
+    row('Impedance Z', q(ok ? f1(r.Z) + ' Ω' : '—'));
+    row('Current I', q(ok ? fA(r.I) : '—'));
+    r.parts.forEach((p, i) => row('V<sub>' + p.k + '</sub> drop', q(fV(p.mag)), i === 0));
+  } else {
+    r.parts.forEach(p => row('I<sub>' + p.k + '</sub> branch', q(fA(p.mag))));
+    row('Line current I', q(ok ? fA(r.I) : '0 A'), true);
+    row('Impedance Z', q(ok ? f1(r.Z) + ' Ω' : '∞'));
+  }
+  row('Angle θ', q(ok ? r.theta.toFixed(1) + '°' : '—'), true);
+  row('Power factor', q(ok ? r.pf.toFixed(2) + ' ' + lagWord(r.theta) : '—'));
+  row('Real P', q(ok ? fPow(r.P, 'W') : '—'), true);
+  row('Reactive Q', q(ok ? fPow(Math.abs(r.Q), 'VAR') : '—'));
+  row('Apparent S', q(ok ? fPow(r.S, 'VA') : '—'));
+  if (!m && (r.fault || r.note)) rows.push(`<div class="note">${r.fault || r.note}</div>`);
+  $('#meter').innerHTML = rows.join('');
+}
+
+function renderFoot(){
+  const r = RES, m = masked(), el = $('#lagText');
+  el.classList.toggle('warn', !!r.fault && !m);
+  let lag = false, lead = false;
+  if (m) el.textContent = 'Lead, lag, or in phase?';
+  else if (r.fault) el.textContent = 'Fault: ' + r.fault;
+  else if (r.I <= 1e-9) el.textContent = r.note || 'No current';
+  else if (Math.abs(r.theta) <= 0.05) el.textContent = 'Current in phase with voltage · PF 1.00';
+  else {
+    lag = r.theta > 0; lead = !lag;
+    el.textContent = `Current ${lag ? 'lags' : 'leads'} voltage by ${Math.abs(r.theta).toFixed(1)}° · PF ${r.pf.toFixed(2)} ${lag ? 'lagging' : 'leading'}`;
+  }
+  ['eliE','eliL','eliI'].forEach(id => $('#' + id).classList.toggle('on', lag));
+  ['iceI','iceC','iceE'].forEach(id => $('#' + id).classList.toggle('on', lead));
+}
+
+function renderPrompt(){
+  const base = S.prompt;
+  $('#prompt').innerHTML = (masked() ? '<b>Predict</b>' : '<b>Ask</b>') + '<span>' + base + '</span>';
+}
+
+function syncControls(){
+  ['R','L','C'].forEach(k => {
+    const key = k === 'R' ? 'R' : 'X' + k;
+    $('#on' + k).checked = S.on[k];
+    $('#rng' + k).value = S[key];
+    $('#val' + k).textContent = S[key] + ' Ω';
+    document.querySelector(`.erow[data-k="${k}"]`).classList.toggle('off', !S.on[k]);
+  });
+  $('#subL').textContent = `L = ${mH(S.XL)} mH at 60 Hz · motors, transformers, reactors`;
+  $('#subC').textContent = `C = ${uF(S.XC)} µF at 60 Hz · cap banks, long cables`;
+  $('#tabSeries').setAttribute('aria-selected', S.mode === 'series');
+  $('#tabParallel').setAttribute('aria-selected', S.mode === 'parallel');
+  $('#volts').value = S.V;
+  $('#btnPredict').setAttribute('aria-pressed', S.predict);
+  const rev = $('#btnReveal'); rev.disabled = !S.predict;
+  rev.firstChild.textContent = S.predict && S.revealed ? 'Hide' : 'Reveal';
+  $('#btnRun').firstChild.textContent = S.running ? 'Pause' : 'Run';
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', S.show[c.dataset.tr]));
+  $('#chipParts').textContent = S.mode === 'series' ? 'Element voltages' : 'Branch currents';
+  const r = RES;
+  $('#chipV').textContent = `Voltage ${Math.round(S.V * Math.SQRT2)} Vpk`;
+  $('#chipI').textContent = masked() || r.I <= 1e-9 ? 'Current' : `Current ${f1(r.I * Math.SQRT2)} Apk`;
+  document.body.classList.toggle('masked', masked());
+}
+
+let RES = solve();
+function update(){
+  RES = solve();
+  buildCircuit(); syncControls(); renderMeter(); renderFoot(); renderPrompt(); drawTri(); drawPhasor(); drawScope(); updateDots();
+}
+
+/* ---------- actions ---------- */
+function applyPreset(p){
+  S.mode = p.mode; S.on = {R: !!p.on.R, L: !!p.on.L, C: !!p.on.C};
+  S.R = p.R; S.XL = p.XL; S.XC = p.XC; S.prompt = p.prompt;
+  if (S.predict) S.revealed = false;
+  update();
+}
+function newProblem(){
+  const pool = [4,5,6,8,10,12,15,16,20,24,25,30,40];
+  const combos = [['R','L'],['R','L'],['R','C'],['R','L','C'],['R','L','C'],['L'],['C'],['R']];
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const c = pick(combos);
+  S.on = {R: c.includes('R'), L: c.includes('L'), C: c.includes('C')};
+  S.R = pick(pool); S.XL = pick(pool); do { S.XC = pick(pool); } while (S.on.L && S.on.C && S.XC === S.XL && !S.on.R);
+  S.prompt = 'New problem. Read the loads and call it: does current lead or lag, by roughly how much, and what is the power factor?';
+  if (S.predict) S.revealed = false;
+  update();
+}
+function setMode(mode){ S.mode = mode; if (S.predict) S.revealed = false; update(); }
+function togglePredict(){ S.predict = !S.predict; S.revealed = !S.predict; update(); }
+function toggleReveal(){ if (!S.predict) return; S.revealed = !S.revealed; update(); }
+function toggleRun(){ S.running = !S.running; syncControls(); }
+
+$('#presets').innerHTML = PRESETS.map((p, i) => `<button type="button" class="pbtn" data-p="${i}"><strong>${p.name}</strong><span>${p.tag}</span></button>`).join('');
+document.querySelectorAll('.pbtn').forEach(b => b.addEventListener('click', () => applyPreset(PRESETS[+b.dataset.p])));
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => { S.show[c.dataset.tr] = !S.show[c.dataset.tr]; update(); }));
+['R','L','C'].forEach(k => {
+  const key = k === 'R' ? 'R' : 'X' + k;
+  $('#on' + k).addEventListener('change', e => { S.on[k] = e.target.checked; update(); });
+  $('#rng' + k).addEventListener('input', e => { S[key] = +e.target.value; update(); });
+});
+$('#volts').addEventListener('change', e => { S.V = +e.target.value; update(); });
+$('#speed').addEventListener('input', e => { S.speed = +e.target.value; });
+$('#btnNew').addEventListener('click', newProblem);
+$('#btnPredict').addEventListener('click', togglePredict);
+$('#btnReveal').addEventListener('click', toggleReveal);
+$('#btnRun').addEventListener('click', toggleRun);
+
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.tagName === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (t.classList && t.classList.contains('elm')) return;
+  const k = e.key.toLowerCase();
+  const map = {'1': () => setMode('series'), '2': () => setMode('parallel'), 'n': newProblem, 'h': togglePredict, ' ': toggleReveal, 'e': toggleRun,
+    'p': () => { S.show.parts = !S.show.parts; update(); }};
+  if (map[k]){ e.preventDefault(); map[k](); }
+});
+
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readTheme(); update(); });
+new MutationObserver(() => { readTheme(); update(); }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+new ResizeObserver(() => { drawPhasor(); drawScope(); }).observe(document.querySelector('.grid'));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawPhasor(); drawScope(); });
+
+update();
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (S.running) S.t += dt * S.speed;
+  drawScope(); updateDots();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>

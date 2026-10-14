@@ -1,0 +1,435 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>AC Load Basics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one distribution feeder across the top (substation → poles → three customer taps), cutout cards under it, substation meter (scope) below. */
+:root{
+  --bg:#eef1ee; --panel:#ffffff; --panel-2:#e6ebe7; --line:#c6cfc9; --ink:#15211b; --muted:#5b6a62; --grid:#e1e7e3;
+  --v:#c98a00; --i:#1b6fd1; --good:#1f8a45; --bad:#c0392b; --accent:#1b6fd1;
+  --pole:#8a6a48; --wire:#33413a; --sky:#e8f0f4; --ground:#cfd8c9; --win:#ffd34d; --winoff:#c9d2cc; --house:#d9cbb4; --roof:#7c5a44;
+  --r:#c25a17; --l:#6a48cc; --c:#1d8656;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1512; --panel:#151d19; --panel-2:#1d2722; --line:#2b3831; --ink:#e4ece7; --muted:#90a198; --grid:#202b25;
+  --v:#f5c33b; --i:#5aa7ff; --good:#45c472; --bad:#ff6b5e; --accent:#5aa7ff;
+  --pole:#9c7a55; --wire:#b9c6bf; --sky:#16212a; --ground:#1f2b22; --win:#ffd34d; --winoff:#2c3832; --house:#4a4236; --roof:#7a5843;
+  --r:#f28c40; --l:#a88dff; --c:#52d39c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1512; --panel:#151d19; --panel-2:#1d2722; --line:#2b3831; --ink:#e4ece7; --muted:#90a198; --grid:#202b25;
+  --v:#f5c33b; --i:#5aa7ff; --good:#45c472; --bad:#ff6b5e; --accent:#5aa7ff;
+  --pole:#9c7a55; --wire:#b9c6bf; --sky:#16212a; --ground:#1f2b22; --win:#ffd34d; --winoff:#2c3832; --house:#4a4236; --roof:#7a5843;
+  --r:#f28c40; --l:#a88dff; --c:#52d39c; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.4}
+.app{max-width:1400px;margin:0 auto;padding-inline:16px;padding-block:12px 24px;display:flex;flex-direction:column;gap:12px}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,.tap:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+kbd{font-family:var(--f-mono);font-size:11px;padding:1px 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted);margin-left:6px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:700;font-size:36px;margin:0;line-height:1}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn[aria-pressed="true"] kbd{color:var(--bg);border-color:var(--bg)}
+.speed{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.speed input{width:110px;accent-color:var(--accent)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0;display:flex;flex-direction:column;gap:10px}
+h2{font-family:var(--f-display);font-weight:700;font-size:16px;letter-spacing:.1em;text-transform:uppercase;margin:0;color:var(--muted)}
+
+.scene-wrap{overflow-x:auto;border-radius:8px}
+#scene{width:100%;min-width:640px;height:auto;display:block;border-radius:8px}
+#scene text{font-family:var(--f-body);fill:var(--ink)}
+.lab{font-family:var(--f-display)!important;font-weight:700;font-size:17px;letter-spacing:.08em}
+.sm{font-size:12px;fill:var(--muted)!important}
+.pole{fill:var(--pole)}
+.cond{fill:none;stroke:var(--wire);stroke-width:3;stroke-linecap:round}
+.cond-thin{fill:none;stroke:var(--wire);stroke-width:2;stroke-linecap:round}
+.dot{fill:none;stroke:var(--i);stroke-width:6;stroke-linecap:round;stroke-dasharray:0.1 20}
+.eq{fill:var(--panel-2);stroke:var(--ink);stroke-width:2}
+.fuse{stroke:var(--ink);stroke-width:6;stroke-linecap:round}
+.fuse-open{stroke:var(--bad)}
+.tap{cursor:pointer}
+.tap .hit{fill:transparent}
+.tap:hover .fuse{stroke:var(--accent)}
+
+.taps{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:720px){.taps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tc{border:2px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--panel)}
+.tc.on{border-color:var(--k)}
+.tc-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tc-h strong{font-size:19px}
+.chip{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--k);border:1px solid var(--k);border-radius:999px;padding:2px 8px}
+.tc p{margin:0;font-size:14px;color:var(--muted)}
+.cut{justify-content:center;font-size:16px}
+.tc.on .cut{background:var(--k);border-color:var(--k);color:var(--panel)}
+.tc.on .cut kbd{color:var(--panel);border-color:var(--panel)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;background:transparent;border:0;padding:7px 6px;font-weight:600;cursor:pointer;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:980px){.grid{grid-template-columns:minmax(0,7fr) minmax(300px,4fr)}}
+.scope-wrap{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:12px;align-items:stretch}
+#scope{width:100%;height:280px;display:block;border-radius:8px}
+@media (max-width:600px){#scope{height:220px}.scope-wrap{grid-template-columns:minmax(0,1fr) 72px}}
+.bars{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bar{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.bar .track{position:relative;flex:1;width:26px;background:var(--panel-2);border-radius:6px;overflow:hidden;min-height:120px}
+.bar .track::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:var(--line)}
+.bar .fill{position:absolute;left:0;right:0;top:50%;height:50%;transform-origin:top center;border-radius:3px}
+.bar span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;line-height:1.1}
+
+#vBig{font-family:var(--f-display);font-weight:700;font-size:40px;line-height:1;letter-spacing:.02em}
+#vSmall{font-size:18px;color:var(--muted);margin-top:4px}
+.read{display:flex;flex-direction:column;gap:14px}
+.stat{display:flex;flex-direction:column;gap:6px}
+.stat .k{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--f-display);font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:20px;color:var(--muted)}
+.meter{height:14px;background:var(--panel-2);border-radius:7px;overflow:hidden}
+.meter i{display:block;height:100%;width:100%;background:var(--good)}
+.stat .w{font-size:15px;color:var(--muted)}
+
+.quiz{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px}
+.quiz .q{font-weight:700;font-size:18px;margin-right:6px}
+.ans{min-width:120px;justify-content:center;font-size:17px;padding:12px 18px}
+.ans.picked{outline:3px solid var(--accent)}
+.ans.right{background:var(--good);color:var(--panel);border-color:var(--good)}
+.ans.wrong{background:var(--bad);color:var(--panel);border-color:var(--bad)}
+#btnReveal{background:var(--accent);color:var(--panel);border-color:var(--accent)}
+#btnReveal kbd{color:var(--panel);border-color:var(--panel)}
+#qResult{font-weight:700;font-size:18px}
+.quiz-off .ans,.quiz-off #btnReveal{display:none}
+</style>
+
+<div class="app">
+  <header class="top">
+    <h1>AC Load Basics</h1>
+    <div class="tools">
+      <button class="btn" id="btnQuiz" type="button" aria-pressed="false">Guessing game<kbd>G</kbd></button>
+      <button class="btn" id="btnNew" type="button">New setup<kbd>N</kbd></button>
+      <button class="btn" id="btnRun" type="button">Pause<kbd>E</kbd></button>
+      <label class="speed" for="speed">Speed <input type="range" id="speed" min="0.05" max="0.8" step="0.05" value="0.2"></label>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>The feeder</h2>
+    <div class="scene-wrap"><svg id="scene" viewBox="0 0 900 300" role="img" aria-label="Substation feeding a distribution line with three taps"></svg></div>
+    <div class="taps">
+      <div class="tc" data-tap="H" style="--k:var(--r)">
+        <div class="tc-h"><strong>Homes</strong><span class="chip">Resistive</span></div>
+        <p>Water heaters, ovens, lights. Power turns straight into heat and light.</p>
+        <button type="button" class="btn cut" data-cut="H"></button>
+      </div>
+      <div class="tc" data-tap="M" style="--k:var(--l)">
+        <div class="tc-h"><strong>Oil field pumps</strong><span class="chip">Inductive</span></div>
+        <p>Motors use coils. Coils make the current fall behind.</p>
+        <div class="seg" role="group" aria-label="Pump load size">
+          <button type="button" data-ms="1">Small</button><button type="button" data-ms="2">Medium</button><button type="button" data-ms="3">Large</button>
+        </div>
+        <button type="button" class="btn cut" data-cut="M"></button>
+      </div>
+      <div class="tc" data-tap="C" style="--k:var(--c)">
+        <div class="tc-h"><strong>Cap bank</strong><span class="chip">Capacitive</span></div>
+        <p>Pulls the current ahead. Used to cancel out motor lag.</p>
+        <div class="seg" role="group" aria-label="Cap bank size">
+          <button type="button" data-cs="1">300 kVAR</button><button type="button" data-cs="2">600 kVAR</button><button type="button" data-cs="3">900 kVAR</button>
+        </div>
+        <button type="button" class="btn cut" data-cut="C"></button>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Substation meter: push vs flow</h2>
+      <div class="scope-wrap">
+        <canvas id="scope" aria-label="Voltage and current waves at the substation"></canvas>
+        <div class="bars" aria-hidden="true">
+          <div class="bar"><div class="track"><div class="fill" id="barV" style="background:var(--v)"></div></div><span>Push<br>V</span></div>
+          <div class="bar"><div class="track"><div class="fill" id="barI" style="background:var(--i)"></div></div><span>Flow<br>I</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px">
+        <div><div id="vBig"></div><div id="vSmall"></div></div>
+      </div>
+    </section>
+
+    <section class="card read">
+      <h2>What the line carries</h2>
+      <div class="stat"><span class="k">Amps on the feeder</span><span class="v" id="amps"></span><span class="w" id="ampsW"></span></div>
+      <div class="stat"><span class="k">Power factor</span><span class="v" id="pf"></span><div class="meter"><i id="pfBar"></i></div><span class="w" id="pfW"></span></div>
+    </section>
+  </div>
+
+  <section class="card quiz quiz-off" id="quizBar">
+    <span class="q" id="qText"></span>
+    <button type="button" class="btn ans" data-a="lag">Current lags<kbd>L</kbd></button>
+    <button type="button" class="btn ans" data-a="in">In step<kbd>I</kbd></button>
+    <button type="button" class="btn ans" data-a="lead">Current leads<kbd>D</kbd></button>
+    <button type="button" class="btn" id="btnReveal">Reveal<kbd>Space</kbd></button>
+    <span id="qResult"></span>
+  </section>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const rad = d => d * Math.PI / 180;
+const KV = 12.47;
+const S = {on: {H: true, M: true, C: false}, ms: 3, cs: 3, running: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+  speed: 0.2, t: 0, rock: 0, quiz: false, revealed: true, guess: null};
+
+/* each tap as kW (P) and kVAR (Q, + = lagging) */
+function taps(){
+  return {
+    H: S.on.H ? {P: 600, Q: 0} : {P: 0, Q: 0},
+    M: S.on.M ? {P: 400 * S.ms, Q: 300 * S.ms} : {P: 0, Q: 0},
+    C: S.on.C ? {P: 0, Q: -300 * S.cs} : {P: 0, Q: 0}
+  };
+}
+/* current phasor ∝ P − jQ; return magnitude and phase (deg) */
+const ph = (P, Q) => ({mag: Math.hypot(P, Q), ang: Math.atan2(-Q, P) * 180 / Math.PI});
+function solve(){
+  const t = taps(), P = t.H.P + t.M.P + t.C.P, Q = t.H.Q + t.M.Q + t.C.Q, kva = Math.hypot(P, Q);
+  const r = {P, Q, kva, amps: kva / (Math.sqrt(3) * KV), th: kva > 0 ? Math.atan2(Q, P) * 180 / Math.PI : 0, none: kva < 1};
+  r.seg = {
+    s0: ph(P, Q),
+    s1: ph(t.M.P + t.C.P, t.M.Q + t.C.Q),
+    s2: ph(t.C.P, t.C.Q),
+    tH: ph(t.H.P, t.H.Q), tM: ph(t.M.P, t.M.Q), tC: ph(t.C.P, t.C.Q)
+  };
+  r.pf = r.none ? null : Math.cos(rad(r.th));
+  return r;
+}
+let R = solve();
+const masked = () => S.quiz && !S.revealed;
+const answerOf = r => Math.abs(r.th) < 3 ? 'in' : r.th > 0 ? 'lag' : 'lead';
+
+let C = {};
+function readTheme(){ const cs = getComputedStyle(document.documentElement);
+  ['panel','panel-2','ink','muted','grid','line','v','i'].forEach(n => C[n] = cs.getPropertyValue('--' + n).trim()); }
+
+/* ---------- scene ---------- */
+const POLE = {H: 270, M: 500, C: 760};
+function pole(x){ return `<rect class="pole" x="${x - 5}" y="58" width="10" height="214" rx="2"/><rect class="pole" x="${x - 42}" y="72" width="84" height="7" rx="2"/>
+  <circle cx="${x - 30}" cy="66" r="4" style="fill:var(--muted)"/><circle cx="${x}" cy="66" r="4" style="fill:var(--muted)"/><circle cx="${x + 30}" cy="66" r="4" style="fill:var(--muted)"/>`; }
+function cutout(k){
+  const x = POLE[k] + 30, on = S.on[k];
+  const top = on ? `${x} 96` : `${x + 22} 106`;
+  return `<g class="tap" data-k="${k}" tabindex="0" role="button" aria-label="${{H:'Homes',M:'Pumps',C:'Cap bank'}[k]} cutout, ${on ? 'closed' : 'open'}. Press to operate.">
+    <rect class="hit" x="${x - 20}" y="80" width="60" height="58"/>
+    <path class="cond-thin" d="M${x} 66V90"/>
+    <rect x="${x - 6}" y="86" width="12" height="6" rx="1" style="fill:var(--muted)"/>
+    <line class="fuse ${on ? '' : 'fuse-open'}" x1="${x}" y1="128" x2="${top.split(' ')[0]}" y2="${top.split(' ')[1]}"/>
+    <rect x="${x - 6}" y="128" width="12" height="6" rx="1" style="fill:var(--muted)"/>
+    <text class="sm" x="${x + (on ? 14 : 32)}" y="${on ? 124 : 132}">${on ? 'closed' : 'OPEN'}</text></g>`;
+}
+function buildScene(){
+  const s = [];
+  s.push(`<rect x="0" y="0" width="900" height="272" style="fill:var(--sky)"/><rect x="0" y="272" width="900" height="28" style="fill:var(--ground)"/>`);
+  // substation
+  s.push(`<rect x="18" y="150" width="150" height="122" style="fill:none;stroke:var(--muted);stroke-width:2;stroke-dasharray:4 4"/>
+    <rect class="eq" x="36" y="180" width="62" height="70" rx="4"/>
+    <path d="M44 180V168M67 180V164M90 180V168" style="stroke:var(--ink);stroke-width:3"/>
+    <rect class="eq" x="112" y="196" width="40" height="54" rx="3"/>
+    <text class="sm" x="132" y="227" text-anchor="middle">BKR</text>
+    <path class="cond" d="M98 210H112M152 210H160V66H230"/>
+    <text class="lab" x="93" y="292" text-anchor="middle">SUBSTATION</text>
+    <text class="sm" x="67" y="220" text-anchor="middle">XFMR</text>`);
+  // feeder
+  s.push(`<path class="cond" d="M160 66H850"/><text class="sm" x="200" y="56">12.47 kV feeder</text>`);
+  s.push(`<path class="dot" data-s="s0" d="M160 210V66H300"/><path class="dot" data-s="s1" d="M300 66H530"/><path class="dot" data-s="s2" d="M530 66H790"/>`);
+  s.push(`<rect x="846" y="58" width="8" height="16" rx="2" style="fill:var(--muted)"/>`);
+  // homes tap
+  const h = POLE.H;
+  s.push(pole(h));
+  s.push(`<path class="cond-thin" d="M${h + 30} 134V150"/><rect class="eq" x="${h + 16}" y="150" width="28" height="44" rx="7"/>
+    <text class="sm" x="${h + 30}" y="210" text-anchor="middle">can</text>
+    <path class="cond-thin" d="M${h + 44} 166Q${h + 80} 200 ${h + 96} 222"/><path class="cond-thin" d="M${h + 44} 170Q${h + 120} 196 ${h + 168} 222"/>`);
+  s.push(`<path class="dot" data-s="tH" d="M${h + 30} 66V150"/>`);
+  [[h + 70, 0], [h + 142, 1]].forEach(([x, n]) => s.push(`<path d="M${x} 228L${x + 28} 204L${x + 56} 228Z" style="fill:var(--roof)"/>
+    <rect x="${x + 4}" y="228" width="48" height="44" style="fill:var(--house)"/>
+    <rect class="win" x="${x + 10}" y="236" width="14" height="12" style="fill:var(--winoff)"/><rect class="win" x="${x + 32}" y="236" width="14" height="12" style="fill:var(--winoff)"/>
+    <rect x="${x + 22}" y="254" width="12" height="18" style="fill:var(--roof)"/>`));
+  s.push(`<text class="lab" x="${h + 100}" y="30" text-anchor="middle" style="fill:var(--r)">HOMES</text>`);
+  // pumps tap
+  const m = POLE.M;
+  s.push(pole(m));
+  s.push(`<path class="cond-thin" d="M${m + 30} 134V150"/><rect class="eq" x="${m + 16}" y="150" width="28" height="44" rx="7"/>
+    <path class="cond-thin" d="M${m + 44} 172Q${m + 120} 200 ${m + 168} 238"/>
+    <rect x="${m + 50}" y="266" width="140" height="6" style="fill:var(--muted)"/>
+    <path d="M${m + 108} 266L${m + 120} 206L${m + 132} 266" style="fill:none;stroke:var(--ink);stroke-width:4;stroke-linejoin:round"/>
+    <g id="beam" transform="rotate(0 ${m + 120} 206)">
+      <rect x="${m + 66}" y="201" width="112" height="9" rx="2" style="fill:var(--ink)"/>
+      <path d="M${m + 66} 196Q${m + 52} 206 ${m + 66} 222Z" style="fill:var(--ink)"/>
+    </g>
+    <line x1="${m + 59}" y1="214" x2="${m + 59}" y2="266" style="stroke:var(--ink);stroke-width:2"/>
+    <rect class="eq" x="${m + 156}" y="236" width="30" height="30" rx="3"/>
+    <text x="${m + 171}" y="257" text-anchor="middle" style="font-weight:700;font-size:16px">M</text>`);
+  s.push(`<path class="dot" data-s="tM" d="M${m + 30} 66V150"/>`);
+  s.push(`<text class="lab" x="${m + 110}" y="30" text-anchor="middle" style="fill:var(--l)">OIL FIELD PUMPS</text>`);
+  // cap bank tap
+  const c = POLE.C;
+  s.push(pole(c));
+  s.push(`<path class="cond-thin" d="M${c + 30} 134V150H${c + 92}"/>
+    <rect x="${c + 10}" y="196" width="96" height="6" rx="2" style="fill:var(--muted)"/>`);
+  [0, 1, 2].forEach(n => { const x = c + 22 + n * 26; s.push(`<path class="cond-thin" d="M${x + 8} 150V160"/><rect class="eq" x="${x}" y="160" width="16" height="36" rx="2"/><rect x="${x + 5}" y="156" width="6" height="5" style="fill:var(--ink)"/>`); });
+  s.push(`<path class="dot" data-s="tC" d="M${c + 30} 66V150"/>`);
+  s.push(`<text class="lab" x="${c + 50}" y="30" text-anchor="middle" style="fill:var(--c)">CAP BANK</text>`);
+  s.push(`<text class="sm" x="${c + 58}" y="222" text-anchor="middle">${300 * S.cs} kVAR</text>`);
+  s.push(cutout('H'), cutout('M'), cutout('C'));
+  $('#scene').innerHTML = s.join('');
+  dots = [...document.querySelectorAll('#scene .dot')];
+  wins = [...document.querySelectorAll('#scene .win')];
+  beam = $('#beam');
+  document.querySelectorAll('#scene .tap').forEach(g => {
+    const go = () => { toggle(g.dataset.k); const n = document.querySelector(`#scene .tap[data-k="${g.dataset.k}"]`); if (n) n.focus(); };
+    g.addEventListener('click', go);
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); go(); } });
+  });
+}
+let dots = [], wins = [], beam = null;
+
+/* ---------- scope ---------- */
+function fit(cv){ const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return {ctx, w, h}; }
+function drawScope(){
+  const {ctx, w, h} = fit($('#scope')), m = masked(), th = rad(R.th), showI = !m && !R.none;
+  ctx.fillStyle = C['panel-2']; ctx.fillRect(0, 0, w, h);
+  const x0 = 16, x1 = w - 16, y0 = 36, y1 = h - 28, ym = (y0 + y1) / 2, half = (y1 - y0) / 2;
+  const X = d => x0 + d / 720 * (x1 - x0);
+  ctx.lineWidth = 1; ctx.font = '12px "IBM Plex Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let d = 0; d <= 720; d += 90){ ctx.strokeStyle = C.grid; ctx.beginPath(); ctx.moveTo(X(d), y0); ctx.lineTo(X(d), y1); ctx.stroke();
+    ctx.fillStyle = C.muted; ctx.fillText(d + '°', Math.min(Math.max(X(d), x0 + 12), x1 - 16), y1 + 8); }
+  ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(x0, ym); ctx.lineTo(x1, ym); ctx.stroke();
+  const trace = (fn, col) => { ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.beginPath();
+    for (let px = 0; px <= x1 - x0; px += 1.5){ const y = ym - fn(rad(px / (x1 - x0) * 720)) * half; px ? ctx.lineTo(x0 + px, y) : ctx.moveTo(x0 + px, y); } ctx.stroke(); };
+  const vA = 0.85, iA = 0.2 + 0.5 * Math.min(1, R.amps / 110);
+  trace(a => vA * Math.sin(a), C.v);
+  if (showI) trace(a => iA * Math.sin(a - th), C.i);
+  const flag = (d, y, col, txt) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(d), y, 7, 0, 7); ctx.fill();
+    ctx.font = '700 13px "Barlow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(txt, X(d), y - 10); };
+  const ipk = ((90 + R.th) % 360 + 360) % 360;
+  flag(90, ym - vA * half, C.v, 'V top');
+  if (showI){ flag(ipk, ym - iA * half, C.i, 'I top');
+    if (Math.abs(R.th) >= 3){ const a = X(Math.min(90, 90 + R.th)), b = X(Math.max(90, 90 + R.th)), yb = y0 - 18;
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a, yb); ctx.lineTo(b, yb); ctx.moveTo(a, yb - 5); ctx.lineTo(a, yb + 5); ctx.moveTo(b, yb - 5); ctx.lineTo(b, yb + 5); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '700 14px "Barlow", sans-serif';
+      ctx.fillText(Math.abs(R.th).toFixed(0) + '° gap', b + 8, yb); } }
+  const p = ((S.t * 360) % 720 + 720) % 720, xs = X(p), a = rad(p);
+  ctx.strokeStyle = C.muted; ctx.globalAlpha = .45; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(xs, y0); ctx.lineTo(xs, y1); ctx.stroke(); ctx.globalAlpha = 1;
+  const dot = (y, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(xs, y, 6, 0, 7); ctx.fill(); };
+  dot(ym - vA * Math.sin(a) * half, C.v); if (showI) dot(ym - iA * Math.sin(a - th) * half, C.i);
+  if (m){ ctx.fillStyle = C.i; ctx.font = '700 17px "Barlow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Current wave hidden. Make your call.', (x0 + x1) / 2, y1 - 18); }
+  else if (R.none){ ctx.fillStyle = C.muted; ctx.font = '700 17px "Barlow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('All cutouts open. No load, no current.', (x0 + x1) / 2, y1 - 18); }
+}
+
+function tick(dt){
+  const wt = 2 * Math.PI * S.t, m = masked();
+  dots.forEach(d => { const g = R.seg[d.dataset.s];
+    if (!g || g.mag < 1){ d.style.display = 'none'; return; } d.style.display = '';
+    d.style.strokeDashoffset = m ? 0 : ((8 + 26 * Math.min(1, g.mag / 2000)) * Math.cos(wt + rad(g.ang))).toFixed(2); });
+  const iH = R.seg.tH.mag > 0 ? Math.abs(Math.sin(wt)) : 0;
+  wins.forEach(wn => { wn.style.fill = iH > 0 ? 'var(--win)' : 'var(--winoff)'; wn.style.opacity = iH > 0 ? (0.45 + 0.55 * iH).toFixed(2) : 1; });
+  if (beam){ if (S.on.M && S.running) S.rock += dt * (0.4 + 0.15 * S.ms);
+    const mx = POLE.M + 120; beam.setAttribute('transform', `rotate(${(9 * Math.sin(2 * Math.PI * S.rock)).toFixed(2)} ${mx} 206)`); }
+  const v = Math.sin(wt), i = Math.sin(wt - rad(R.th)), iA = 0.3 + 0.6 * Math.min(1, R.amps / 110);
+  $('#barV').style.transform = `scaleY(${-v * 0.9})`;
+  $('#barI').style.transform = m || R.none ? 'scaleY(0)' : `scaleY(${-i * iA})`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  R = solve(); buildScene();
+  const m = masked(), ans = answerOf(R);
+  document.querySelectorAll('.tc').forEach(tc => { const k = tc.dataset.tap, on = S.on[k]; tc.classList.toggle('on', on);
+    const b = tc.querySelector('.cut'); b.innerHTML = (on ? 'Cutout closed' : 'Cutout open') + `<kbd>${{H:1,M:2,C:3}[k]}</kbd>`; b.setAttribute('aria-pressed', on); });
+  document.querySelectorAll('[data-ms]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.ms === S.ms));
+  document.querySelectorAll('[data-cs]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.cs === S.cs));
+
+  const big = $('#vBig'), small = $('#vSmall');
+  if (m){ big.textContent = 'Lead, lag, or in step?'; big.style.color = 'var(--muted)'; small.textContent = 'Look at what is on the line. Where will the flow peak?'; }
+  else if (R.none){ big.textContent = 'NO LOAD'; big.style.color = 'var(--muted)'; small.textContent = 'Close a cutout to put load on the feeder.'; }
+  else if (ans === 'in'){ big.textContent = 'IN STEP'; big.style.color = 'var(--good)'; small.textContent = 'Push and flow rise and fall together.'; }
+  else if (ans === 'lag'){ big.textContent = 'CURRENT LAGS'; big.style.color = 'var(--ink)'; small.textContent = `The flow falls behind the push by ${Math.abs(R.th).toFixed(0)}°.`; }
+  else { big.textContent = 'CURRENT LEADS'; big.style.color = 'var(--ink)'; small.textContent = `The flow gets ahead of the push by ${Math.abs(R.th).toFixed(0)}°.`; }
+
+  const work = R.P / (Math.sqrt(3) * KV);
+  $('#amps').innerHTML = m ? '?' : `${R.amps.toFixed(0)} <small>A</small>`;
+  $('#ampsW').textContent = m || R.none ? '' : Math.abs(R.amps - work) < 1 ? 'Every amp is doing work.' : `Only ${work.toFixed(0)} A would be needed if the current were in step. The extra amps heat the wire and do no work.`;
+  const pf = R.pf;
+  $('#pf').textContent = m ? '?' : pf === null ? '—' : pf.toFixed(2);
+  $('#pfBar').style.width = m || pf === null ? '0%' : (pf * 100).toFixed(0) + '%';
+  $('#pfBar').style.background = pf >= 0.97 ? 'var(--good)' : pf >= 0.85 ? 'var(--v)' : 'var(--bad)';
+  $('#pfW').textContent = m || pf === null ? '' : pf >= 0.97 ? 'Good. This is what the utility wants.' : pf >= 0.85 ? 'Fair. Some wasted current on the line.' : 'Poor. Lots of wasted current on the line.';
+
+  $('#quizBar').classList.toggle('quiz-off', !S.quiz);
+  $('#btnQuiz').setAttribute('aria-pressed', S.quiz);
+  $('#btnRun').firstChild.textContent = S.running ? 'Pause' : 'Run';
+  $('#qText').textContent = !S.quiz ? 'Turn on the guessing game to quiz the class.' : S.revealed ? 'Answer:' : 'Crews, make the call:';
+  document.querySelectorAll('.ans').forEach(b => {
+    b.classList.toggle('picked', S.guess === b.dataset.a && !S.revealed);
+    b.classList.toggle('right', S.quiz && S.revealed && b.dataset.a === ans);
+    b.classList.toggle('wrong', S.quiz && S.revealed && S.guess === b.dataset.a && b.dataset.a !== ans);
+  });
+  $('#btnReveal').firstChild.textContent = S.revealed ? 'Hide' : 'Reveal';
+  const res = $('#qResult');
+  res.textContent = S.quiz && S.revealed && S.guess ? (S.guess === ans ? 'Correct.' : 'Not quite. Look at which wave tops out first.') : '';
+  res.style.color = S.guess === ans ? 'var(--good)' : 'var(--bad)';
+  drawScope(); tick(0);
+}
+
+function changed(){ S.guess = null; if (S.quiz) S.revealed = false; render(); }
+function toggle(k){ S.on[k] = !S.on[k]; changed(); }
+function newSetup(){
+  const pick = n => 1 + Math.floor(Math.random() * n);
+  do { S.on = {H: Math.random() < .5, M: Math.random() < .65, C: Math.random() < .5}; } while (!S.on.H && !S.on.M && !S.on.C);
+  S.ms = pick(3); S.cs = pick(3); changed();
+}
+function toggleQuiz(){ S.quiz = !S.quiz; S.revealed = !S.quiz; S.guess = null; render(); }
+function reveal(){ if (!S.quiz) return; S.revealed = !S.revealed; render(); }
+function guess(a){ if (!S.quiz || S.revealed) return; S.guess = a; render(); }
+
+document.querySelectorAll('.cut').forEach(b => b.addEventListener('click', () => toggle(b.dataset.cut)));
+document.querySelectorAll('[data-ms]').forEach(b => b.addEventListener('click', () => { S.ms = +b.dataset.ms; changed(); }));
+document.querySelectorAll('[data-cs]').forEach(b => b.addEventListener('click', () => { S.cs = +b.dataset.cs; changed(); }));
+document.querySelectorAll('.ans').forEach(b => b.addEventListener('click', () => guess(b.dataset.a)));
+$('#speed').addEventListener('input', e => { S.speed = +e.target.value; });
+$('#btnQuiz').addEventListener('click', toggleQuiz);
+$('#btnNew').addEventListener('click', newSetup);
+$('#btnRun').addEventListener('click', () => { S.running = !S.running; render(); });
+$('#btnReveal').addEventListener('click', reveal);
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.classList && e.target.classList.contains('tap')) return;
+  const map = {'1': () => toggle('H'), '2': () => toggle('M'), '3': () => toggle('C'), 'g': toggleQuiz, 'n': newSetup,
+    'e': () => { S.running = !S.running; render(); }, ' ': reveal, 'l': () => guess('lag'), 'i': () => guess('in'), 'd': () => guess('lead')};
+  const f = map[e.key.toLowerCase()]; if (f){ e.preventDefault(); f(); }
+});
+
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readTheme(); render(); });
+new MutationObserver(() => { readTheme(); render(); }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+new ResizeObserver(() => drawScope()).observe($('#scope'));
+render();
+let last = performance.now();
+(function frame(now){ const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (S.running) S.t += dt * S.speed; drawScope(); tick(dt); requestAnimationFrame(frame); })(last);
+})();
+</script>
+
+</body></html>

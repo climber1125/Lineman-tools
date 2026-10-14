@@ -1,0 +1,872 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!-- Ferroresonance Simulator. © 2026 Caleb Lenz. All rights reserved. Not for redistribution. -->
+<title>Ferroresonance Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one screen. Header, scenario buttons, then the bank (scene + controls) and the meter. Tutorial spotlight and outcome window sit on top. Matches AC Load Basics. */
+:root{
+  --bg:#eef1ee; --panel:#ffffff; --panel-2:#e6ebe7; --line:#c6cfc9; --ink:#15211b; --muted:#5b6a62; --grid:#e1e7e3;
+  --i:#1b6fd1; --good:#1f8a45; --warn:#c98a00; --bad:#c0392b; --accent:#1b6fd1;
+  --pole:#8a6a48; --wire:#33413a; --sky:#e8f0f4; --ground:#cfd8c9; --win:#ffd34d; --winoff:#c9d2cc; --house:#d9cbb4; --roof:#7c5a44;
+  --can:#fbfcfb; --pad:#b8c0ba; --scrim:rgba(10,16,13,.55);
+  --pA:#c25a17; --pB:#6a48cc; --pC:#1d8656;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1512; --panel:#151d19; --panel-2:#1d2722; --line:#2b3831; --ink:#e4ece7; --muted:#90a198; --grid:#202b25;
+  --i:#5aa7ff; --good:#45c472; --warn:#f5c33b; --bad:#ff6b5e; --accent:#5aa7ff;
+  --pole:#9c7a55; --wire:#b9c6bf; --sky:#16212a; --ground:#1f2b22; --win:#ffd34d; --winoff:#2c3832; --house:#4a4236; --roof:#7a5843;
+  --can:#eef2ef; --pad:#3a463f; --scrim:rgba(0,0,0,.65);
+  --pA:#f28c40; --pB:#a88dff; --pC:#52d39c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1512; --panel:#151d19; --panel-2:#1d2722; --line:#2b3831; --ink:#e4ece7; --muted:#90a198; --grid:#202b25;
+  --i:#5aa7ff; --good:#45c472; --warn:#f5c33b; --bad:#ff6b5e; --accent:#5aa7ff;
+  --pole:#9c7a55; --wire:#b9c6bf; --sky:#16212a; --ground:#1f2b22; --win:#ffd34d; --winoff:#2c3832; --house:#4a4236; --roof:#7a5843;
+  --can:#eef2ef; --pad:#3a463f; --scrim:rgba(0,0,0,.65);
+  --pA:#f28c40; --pB:#a88dff; --pC:#52d39c; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.4}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,.tap:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{height:100%;max-width:1150px;margin:0 auto;display:flex;flex-direction:column;gap:8px;padding-inline:10px;padding-block:8px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:700;font-size:26px;margin:0;line-height:1}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;background:transparent;border:0;padding:6px 6px;font-weight:600;cursor:pointer;font-size:13px;min-height:32px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+/* scenarios */
+.scen{display:flex;flex-direction:column;gap:4px}
+.scenBtns{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.scenBtns button{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:14px;cursor:pointer;min-height:34px;white-space:nowrap}
+.scenBtns button b{font-family:var(--f-display);margin-right:4px}
+.scenBtns button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.scenBtns button.done::after{content:" ✓";color:var(--good)}
+.task{font-size:14px;color:var(--muted)}
+.task b{color:var(--ink)}
+
+/* play */
+.play{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:8px}
+@media (min-width:900px){.play{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}}
+#scene{width:100%;height:auto;display:block;border-radius:8px;max-height:33vh}
+@media (min-width:900px){#scene{max-height:none}}
+#scene text{font-family:var(--f-body);fill:var(--ink)}
+.lab{font-family:var(--f-display)!important;font-weight:700;font-size:15px;letter-spacing:.08em}
+.sm{font-size:11px;fill:var(--muted)!important}
+.cond{fill:none;stroke:var(--wire);stroke-width:3;stroke-linecap:round}
+.dot{fill:none;stroke:var(--i);stroke-width:5;stroke-linecap:round;stroke-dasharray:0.1 16}
+.fuse{stroke:var(--ink);stroke-width:6;stroke-linecap:round}
+.tap{cursor:pointer}
+.tap .hit{fill:transparent}
+.shake{animation:shake .14s linear infinite;transform-box:fill-box}
+@keyframes shake{0%{transform:translate(-1px,0)}50%{transform:translate(1px,-1px)}100%{transform:translate(-1px,0)}}
+@media (prefers-reduced-motion: reduce){.shake{animation:none}}
+.cuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.cut{gap:8px;border-width:2px;border-color:var(--k);padding:4px 6px;min-height:38px}
+.cut b{font-family:var(--f-display);font-size:18px;line-height:1;color:var(--k)}
+.cut small{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cut[data-st="open"],.cut[data-st="opening"]{background:var(--panel-2)} .cut[data-st="open"] small,.cut[data-st="opening"] small{color:var(--warn)}
+.cut[data-st="blown"]{background:var(--panel-2)} .cut[data-st="blown"] small{color:var(--bad)}
+.sliders{display:flex;flex-direction:column;gap:4px}
+.sl{display:grid;grid-template-columns:50px minmax(0,1fr) 74px;gap:8px;align-items:center}
+.sl label,.sl .k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sl output{font-family:var(--f-mono);font-size:13px;text-align:right;white-space:nowrap}
+.sl input{width:100%;accent-color:var(--accent);height:26px;margin:0}
+.meterCard{min-height:0}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+.cvWrap{position:relative;flex:1 1 auto;min-height:100px}
+#scope{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:8px}
+#vBig{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1}
+#vSmall{font-size:14px;color:var(--muted);line-height:1.3;min-height:2.6em}
+
+body.simple .techOnly{display:none!important}
+body:not(.simple) .simpleOnly{display:none!important}
+.sl3{grid-template-columns:50px minmax(0,1fr) 96px}
+.slHint{font-size:13px;color:var(--muted);line-height:1.3}
+.swingRow{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:center;background:var(--panel-2);border-radius:10px;padding:10px}
+.swingRow svg{width:120px;height:96px;display:block}
+.swingRow p{margin:0;font-size:15px}
+.swingRow b{display:block;font-family:var(--f-display);font-size:18px;margin-bottom:2px}
+h1{font-size:clamp(20px,5.4vw,26px)}
+.top{flex-wrap:nowrap}
+.narrow{display:none}
+@media (max-width:520px){.wide{display:none}.narrow{display:inline}#btnTut,#btnSafe{width:36px;padding:0}}
+.taskRow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.taskRow .btn{flex:0 0 auto;min-height:32px;padding:4px 10px;font-size:14px}
+.tools{flex-wrap:nowrap}
+@media (max-width:520px){#vBig{font-size:21px}.app{gap:6px}}
+.mtools{display:flex;gap:6px;align-items:center}
+.mtools .btn{min-height:32px;width:40px;padding:0}
+@media (max-width:899px){#scene{max-height:28vh}}
+/* window */
+.scrim{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.win{width:100%;max-width:560px;max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-top:6px solid var(--k,var(--ink));border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.win .eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.win h2{font-family:var(--f-display);font-weight:700;font-size:30px;line-height:1.05;margin:0;text-wrap:balance}
+.win p{margin:0}
+.facts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.facts li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px}
+.facts li::before{content:"";width:10px;height:10px;border-radius:50%;margin-top:7px;background:var(--muted)}
+.facts li.bad::before{background:var(--bad)} .facts li.good::before{background:var(--good)} .facts li.warn::before{background:var(--warn)}
+.take{border-left:4px solid var(--ink);padding:8px 12px;background:var(--panel-2);border-radius:0 8px 8px 0;font-weight:600}
+[hidden]{display:none!important}
+@media (max-width:520px){.tools{gap:4px}#btnTut,#btnSafe{width:32px!important}h1{font-size:clamp(18px,5vw,26px)}}
+h3.sub{font-family:var(--f-display);font-weight:700;font-size:19px;margin:2px 0 -4px}
+.warnBox{border-left:4px solid var(--bad);padding:8px 12px;background:var(--panel-2);border-radius:0 8px 8px 0}
+.winBtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+/* tutorial */
+.tut{position:fixed;inset:0;z-index:20;pointer-events:none}
+.tut .hole{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px var(--scrim);outline:3px solid var(--accent);transition:all .25s ease;pointer-events:none}
+.tut .hole.none{left:50%!important;top:40%!important;width:0!important;height:0!important;outline:0}
+.tip{position:fixed;width:min(340px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;pointer-events:auto;box-shadow:0 14px 40px rgba(0,0,0,.3)}
+.tip .n{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tip h3{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0;line-height:1.05}
+.tip p{margin:0;font-size:15px}
+.tip .row{display:flex;gap:8px;justify-content:space-between;align-items:center}
+@media (prefers-reduced-motion: reduce){.tut .hole{transition:none}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <h1>Ferroresonance<span class="wide"> Simulator</span></h1>
+    <div class="tools">
+      <div class="seg" id="mode" role="group" aria-label="Explanations"><button type="button" data-m="simple">Simple</button><button type="button" data-m="tech">Technical</button></div>
+      <button class="btn" id="btnSafe" type="button" aria-label="How crews prevent it"><span class="wide">Prevent it</span><span class="narrow">⚠</span></button>
+      <button class="btn" id="btnTut" type="button" aria-label="Tutorial"><span class="wide">Tutorial</span><span class="narrow">?</span></button>
+    </div>
+  </header>
+
+  <section class="scen" id="scenArea">
+    <div class="scenBtns" id="scenBtns" role="group" aria-label="Scenarios"></div>
+    <div class="taskRow"><div class="task" id="task"></div><button class="btn" type="button" id="btnReset">↺ Reset</button></div>
+  </section>
+
+  <div class="play">
+    <section class="card" id="bankCard">
+      <svg id="scene" viewBox="0 0 640 262" role="img" aria-label="Riser pole with three cutouts, underground cable, three transformers and homes"></svg>
+      <div class="cuts" id="cuts"></div>
+      <div class="sliders" id="sliders">
+        <div class="sl"><label for="len" id="lenL">Length</label><input type="range" id="len" min="100" max="2500" step="50"><output id="lenO"></output></div>
+        <div class="sl"><label for="load" id="loadL">Load</label><input type="range" id="load" min="0" max="50" step="1"><output id="loadO"></output></div>
+        <div class="sl sl3"><span class="k" id="connL">Bank</span><div class="seg" id="conn" role="group" aria-label="Bank primary"><button type="button" data-v="gwye">Gnd Y</button><button type="button" data-v="fwye">Float Y</button><button type="button" data-v="delta">Delta</button></div><div class="seg" id="feed" role="group" aria-label="Feed"><button type="button" data-v="urd">URD</button><button type="button" data-v="oh">OH</button></div></div>
+        <div class="slHint simpleOnly">Underground cable stores lots of energy, overhead (OH) very little. Longer = more. Homes using power = brakes. Grounded wye (Gnd Y) = held back, not locked.</div>
+      </div>
+    </section>
+    <section class="card meterCard" id="meterCard">
+      <div class="mh">
+        <div class="seg" id="viewSeg" role="group" aria-label="View" style="min-width:150px"><button type="button" data-view="scope" aria-pressed="true">Voltage</button><button type="button" data-view="inside" aria-pressed="false" id="insideBtn">Inside the can</button></div>
+        <div class="mtools"><div class="seg" id="speed" role="group" aria-label="Speed"><button type="button" data-s="0.15">Slow</button><button type="button" data-s="0.35">Med</button><button type="button" data-s="0.9">Fast</button></div>
+        <button class="btn" id="btnRun" type="button" aria-label="Pause">❚❚</button></div>
+      </div>
+      <div class="cvWrap"><canvas id="scope" aria-label="Live display"></canvas></div>
+      <div id="statusBox"><div id="vBig"></div><div id="vSmall"></div></div>
+    </section>
+  </div>
+</div>
+
+<div class="scrim" id="winScrim" hidden>
+  <div class="win" id="win" role="dialog" aria-modal="true" aria-labelledby="winTitle"></div>
+</div>
+
+<div class="tut" id="tut" hidden>
+  <div class="hole" id="hole"></div>
+  <div class="tip" id="tip" role="dialog" aria-modal="true" aria-labelledby="tipTitle">
+    <div class="n" id="tipN"></div><h3 id="tipTitle"></h3><p id="tipText"></p>
+    <div class="row"><button class="btn" type="button" id="tipSkip">Skip</button><span style="display:flex;gap:6px"><button class="btn" type="button" id="tipBack">Back</button><button class="btn primary" type="button" id="tipNext">Next</button></span></div>
+  </div>
+</div>
+
+<script>
+// Ferroresonance engine — per-unit, illustrative.
+// Open phase: Thevenin series loop  e = vc + dλ/dt ,  C·dvc/dt = im(λ) + vL/R
+// Closed phase: vL = source,  dλ/dt = vL - λ/τdc (residual flux decays slowly)
+const PH = [0, -2.0944, 2.0944];
+const KNEE = 1.4, ARR_FAIL = 1, TAU_H = 300, FUSE_TRIP = 2.25;
+const RW = 0.04; // winding resistance, bleeds trapped charge
+const DRIVE = { gwye: 0.05, fwye: 0.75, delta: 0.9 };
+// Grounded-wye padmount (URD): 4/5-leg core couples the phases magnetically, so the open phase still gets a weak back-feed.
+// Grounded-wye bank of single-phase pole cans (OH): no coupling path.
+const GWYE_PM = 0.5;
+function im(l) { return 0.003 * l + 0.004 * Math.pow(l, 11); }
+function makeSim() {
+  return {
+    t: 0, conn: 'delta', lengthFt: 2500, loadPct: 0,
+    ph: [0, 1, 2].map(p => ({ cut: 'closed', l: -Math.cos(PH[p]), vc: Math.sin(PH[p]), vL: Math.sin(PH[p]), vg: Math.sin(PH[p]), i: 0, iF: 0, heat: 0, arr: 0, arrFailed: false })),
+    events: []
+  };
+}
+function stepSim(s, dt, log) {
+  const capFt = s.lengthFt * (s.feed === 'oh' ? 0.03 : 1); // overhead conductor: a few % of URD cable capacitance per foot
+  const Xc = 18000 / Math.max(1, capFt), C = 1 / Xc;
+  let R = s.loadPct > 0 ? 100 / s.loadPct : 60; // 60 pu ≈ core loss only
+  const pm5 = s.conn === 'gwye' && s.feed !== 'oh';
+  if (s.conn === 'gwye' && !pm5) R = Math.min(R, 2); // single-phase cans: open winding is clamped, heavily damped
+  const nOpen = s.ph.filter(p => p.cut !== 'closed').length;
+  const E = nOpen === 3 ? 0 : (pm5 ? GWYE_PM : DRIVE[s.conn]) * (nOpen === 2 ? 1.1 : 1);
+  s.t += dt;
+  const hs = s.heatScale || 1;
+  let backI = 0;
+  s.ph.forEach((p, k) => {
+    if (p.arrFailed) { p.vL = 0; p.vg = 0; p.l *= 0.99; p.i = 0; return; }
+    if (p.cut === 'closed') {
+      const v = Math.sin(s.t + PH[k]);
+      p.vL = v; p.vg = v; p.l += dt * (v - p.l * 0.01); p.vc = v;
+      p.i = im(p.l) + v / R;
+    } else {
+      const f = (l, vc) => { const e = E * Math.sin(s.t + PH[k]); const vL = e - vc - RW * im(l); return [vL, (im(l) + vL / R) / C]; };
+      const a = f(p.l, p.vc), b = f(p.l + dt / 2 * a[0], p.vc + dt / 2 * a[1]),
+        c = f(p.l + dt / 2 * b[0], p.vc + dt / 2 * b[1]), d = f(p.l + dt * c[0], p.vc + dt * c[1]);
+      p.l += dt / 6 * (a[0] + 2 * b[0] + 2 * c[0] + d[0]);
+      p.vc += dt / 6 * (a[1] + 2 * b[1] + 2 * c[1] + d[1]);
+      p.vL = E * Math.sin(s.t + PH[k]) - p.vc - RW * im(p.l);
+      p.vg = p.vc;
+      p.i = im(p.l) + p.vL / R;
+      if (s.conn !== 'gwye') backI += Math.abs(p.i); else if (pm5) backI += 0.5 * Math.abs(p.i);
+    }
+    // arrester
+    const over = Math.abs(p.vg) - KNEE;
+    if (over > 0) p.arr += over * over * dt * hs * 0.03; else p.arr = Math.max(0, p.arr - dt * hs * 0.0006);
+    if (p.arr >= ARR_FAIL && !p.arrFailed) {
+      p.arrFailed = true; p.arr = ARR_FAIL;
+      log && log('bad', `Arrester on phase ${'ABC'[k]} failed short to ground after absorbing ferroresonant overvoltage.`);
+      s.ph.forEach((q, j) => { if (q.cut === 'closed') q.heat = 99 * TAU_H; });
+    }
+  });
+  const nClosed = 3 - nOpen;
+  s.ph.forEach((p, k) => {
+    if (p.cut !== 'closed') { p.iF = 0; p.heat = Math.max(0, p.heat - dt * hs * p.heat / TAU_H); return; }
+    p.iF = Math.abs(p.i) + 3 * backI; // saturation spikes are large relative to a small can's fuse link
+    p.heat += dt * hs * (p.iF * p.iF - p.heat / TAU_H);
+    if (p.heat > FUSE_TRIP * TAU_H) {
+      p.cut = 'blown'; p.vc = p.vL;
+      log && log('bad', p.heat > 50 * TAU_H ? `Fuse ${'ABC'[k]} blew clearing the arrester fault.` : `Fuse ${'ABC'[k]} blew from sustained saturation current spikes.`);
+    }
+  });
+}
+
+(() => {
+const $ = s => document.querySelector(s);
+const OWNER = '© 2026 Caleb Lenz. All rights reserved.';
+const NAMES = 'ABC', PH_COL = ['var(--pA)','var(--pB)','var(--pC)'];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CONN_TXT = { gwye: 'grounded-wye', fwye: 'floating-wye', delta: 'delta' };
+
+const SCEN = [
+  { short: 'Restore after outage', title: 'Restoring a URD bank after an outage', conn: 'delta', len: 1800, load: 0, feed: 'urd', start: 'open',
+    task: 'The bank is dead after an outage. Close cutouts <b>A</b>, then <b>B</b>, then <b>C</b> one at a time and watch the open phases between closings.',
+    why: 'With only A (or A and B) closed, the open phases are back-fed through the bank and their cores see the URD cable capacitance in series. That single-phase window during restoration is when most URD ferroresonance happens. Residual flux left in the cores from the outage and the random closing instant give it the kick to jump. The open phases can ring to about 2× normal voltage, sometimes more. Closing the last cutout ends it, if the arrester survives that long.',
+    take: 'Single-phase energizing of an unloaded URD bank is the risk. Close the remaining phases quickly, energize with load on, or use gang-operated three-phase switching.' },
+  { short: 'Overhead restore', title: 'Restoring an overhead bank', conn: 'delta', len: 1800, load: 0, feed: 'oh', start: 'open',
+    task: 'Same bank and same run length, fed by overhead conductor. Close <b>A</b>, <b>B</b>, <b>C</b> one at a time.',
+    why: 'Overhead conductor has only a few percent of the capacitance of URD cable per foot. Even a long overhead run cannot store enough energy to drive the core into saturation, so single-phase energizing stays quiet.',
+    take: 'Ferroresonance is mainly a URD problem. Overhead banks rarely see it.' },
+  { short: 'Restore with load', title: 'Restoring a loaded URD bank', conn: 'delta', len: 1800, load: 30, feed: 'urd', start: 'open',
+    task: 'URD bank with 30% load on it. Close <b>A</b>, <b>B</b>, <b>C</b> one at a time.',
+    why: 'Load is resistance, and resistance uses up the energy instead of letting it slosh between the cable and the core. That damping keeps the open phases from jumping to the high-voltage state while the bank is single-phased.',
+    take: 'Energizing with load on is much safer than energizing an empty bank.' },
+  { short: 'Open one cutout', title: 'Opening one cutout on a URD bank', conn: 'delta', len: 1800, load: 0, feed: 'urd',
+    task: 'The bank is running. Open cutout <b>B</b> and watch can B.',
+    why: 'With B open, the cable and the core of can B end up in series. The cable stores energy like a capacitor, the core stores it like a coil, and they pass it back and forth. With no load on the bank, nothing soaks that energy up. Every half cycle the core saturates and pulls a sharp current spike through the A and C fuses, while B rings to about 2× normal voltage, sometimes more.',
+    take: 'Long URD cable + no load + an ungrounded bank + one phase open = ferroresonance.' },
+  { short: 'Short cable', title: 'Short URD cable', conn: 'delta', len: 300, load: 0, feed: 'urd',
+    task: 'No load, but only 300 ft of cable. Open cutout <b>B</b>.',
+    why: 'Less cable is less capacitance. A small capacitor cannot store enough energy to drive the core into saturation, so the circuit does not jump.',
+    take: 'Cable length matters. Switch close to the bank, not at a riser far away. There is no fixed safe length: it depends on transformer size and core type, and newer low-loss transformers ring on shorter runs.' },
+  { short: 'Grounded wye', title: 'Grounded-wye bank', conn: 'gwye', len: 1800, load: 0, feed: 'urd',
+    task: 'Long URD cable, no load, grounded-wye three-phase pad-mount. Open cutout <b>B</b>.',
+    why: 'On a grounded-wye primary each winding has its own path to ground, so the open phase is not back-fed through the other windings the way it is on a delta or floating-wye bank. But a three-phase pad-mount with a 4- or 5-leg core links the phases magnetically. Flux from A and C still drives the B leg, with B\'s cable capacitance in series, and that weaker back-feed can still ring. It is usually milder and needs longer cable than a delta bank. Single-phase cans wired grounded-wye share no core and stay quiet (switch to OH to compare).',
+    take: 'Grounded wye resists ferroresonance but is not immune. Three-phase pad-mounts with 4- or 5-leg cores can still ring. Delta and floating-wye banks are the worst.' },
+  { short: 'Free play', title: 'Free play', conn: 'delta', len: 1200, load: 5, feed: 'urd', free: true,
+    task: 'Set it up yourself. Open all three cutouts, then restore them one at a time, or open just one. Find where it starts to ring.',
+    why: 'More URD cable and less load push a bank toward ferroresonance. Overhead feed, a grounded neutral, or more load pull it back.',
+    take: 'Cable type and length, load, and how the bank is connected decide whether a single-phased bank stays quiet or burns up.' }
+];
+const SIMPLE = [
+  { short: 'Restore (URD)', task: 'The power is out. Close switch <b>A</b>, then <b>B</b>, then <b>C</b>, like a crew restoring power. Watch what happens in between.',
+    why: 'When only one or two switches are closed, the transformers that are still switched off get fed backwards, and the long underground cable feeding them starts storing energy. That is the risky moment. Leftover magnetism in the iron from the outage gives it the first push. Once all three switches are closed, every transformer is fed normally and the swinging stops.',
+    swing: 'Closing one switch at a time gives the swing a push while nobody is holding it. Closing the last switch grabs it.',
+    take: 'The danger is the time between the first and the last switch. Close them quickly, or close them with load on.' },
+  { short: 'Restore (overhead)', task: 'Same restore, but this bank is fed by overhead wire on poles. Close <b>A</b>, <b>B</b>, <b>C</b>.',
+    why: 'Wire up on poles stores very little energy compared with underground cable. There is not enough to get it swinging.',
+    swing: 'Overhead wire is a weak push. The swing never gets going.',
+    take: 'This is mostly an underground (URD) problem.' },
+  { short: 'Restore, homes on', task: 'Underground again, but the homes are using power. Close <b>A</b>, <b>B</b>, <b>C</b>.',
+    why: 'The homes using power burn off the energy before it can build up, even while some switches are still open.',
+    swing: 'The homes are like dragging your feet on the swing. It can\'t build up.',
+    take: 'Load acts like brakes. Restore with load on when you can.' },
+  { short: 'Open one switch', task: 'The power is on. Tap <b>B</b> to open its switch, then watch transformer B.',
+    why: 'When B\'s switch opened, the underground cable and transformer B were left hooked to each other with nothing else on B. The cable holds energy like a battery. The transformer\'s iron core holds energy like a spring. They started passing it back and forth, and every pass pushed the voltage higher. With no homes using power, nothing slowed it down.',
+    swing: 'Like a swing pushed in rhythm with nobody dragging their feet. Every push sends it higher until something breaks.',
+    take: 'Long underground cable + no load + one switch open = trouble.' },
+  { short: 'Short cable', task: 'Only 300 ft of underground cable this time. Open <b>B</b>.',
+    why: 'A short cable can only hold a little energy. There isn\'t enough to get it swinging.',
+    swing: 'A short cable is a weak push. The swing never gets going.',
+    take: 'Shorter cable means less stored energy and less risk. Switch close to the transformers. How short is safe depends on the transformer\'s size and type. Newer, more efficient transformers can swing on shorter runs.' },
+  { short: 'Grounded', task: 'This pad-mount is wired grounded-wye. Open <b>B</b>.',
+    why: 'Grounded-wye wiring ties each phase to ground on its own, so A and C can\'t feed B backwards through the wires. But in a three-phase pad-mount, all three phases share one iron core. A and C still push magnetism through B\'s part of the core, so B gets a weaker push from inside the box. It can still swing, just less than the other wirings.',
+    swing: 'Grounded wiring is like holding the swing with one hand. It slows it down, but it can still move.',
+    take: 'Grounded wye is safer, not safe. A three-phase pad-mount can still swing. Delta and floating-wye banks are the riskiest.' },
+  { short: 'Free play', task: 'Set it up yourself. Turn all three switches off, then back on one at a time, or open just one. Where does it start swinging?',
+    take: 'Underground or overhead, how long the wire is, how much power the homes use, and how the transformers are wired decide whether it stays calm or burns up.' }
+];
+const COLOR_NAME = ['orange', 'purple', 'green'];
+let simple = true, tipsOn = true;
+try { if (localStorage.getItem('ferroMode') === 'tech') simple = false; } catch (e) {}
+let scen = 0; const done = new Set();
+
+/* ---------- sim state ---------- */
+let sim, buf, acc, fillL, dotOff, ferroOn, run, pending, openAt, view = 'scope', speed = 0.35, running = !reduced, modal = false;
+const BUF = 300, SAMP = 0.05;
+function newSim(){
+  const sc = SCEN[scen];
+  sim = makeSim(); sim.heatScale = 4;
+  sim.conn = $('#conn [aria-pressed="true"]')?.dataset.v || sc.conn; sim.lengthFt = +$('#len').value || sc.len; sim.loadPct = +$('#load').value;
+  sim.feed = $('#feed [aria-pressed="true"]')?.dataset.v || sc.feed || 'urd';
+  buf = []; acc = 0; fillL = [0,0,0]; dotOff = [0,0,0]; ferroOn = false; pending = [false,false,false]; openAt = [null,null,null];
+  run = { tips: {}, opened: [], actions: [], outage: sc.start === 'open', everLive: false, liveOpen: null, ferroOpen: null, restoredSince: null, openWall: 0, ferroAt: null, maxOpenV: 0, fuses: [], arr: null, quietSince: null, ferroSince: null, shown: false };
+  if (run.outage) { // dead bank after an outage: cores keep residual flux of random polarity
+    sim.ph.forEach(p => { p.cut = 'open'; p.vc = 0; p.vg = 0; p.vL = 0; p.i = 0; p.l = (Math.random() < .5 ? -1 : 1) * (0.6 + Math.random()*0.2); });
+  }
+}
+let C = {};
+function readTheme(){ const cs = getComputedStyle(document.documentElement);
+  ['panel','panel-2','ink','muted','grid','line','i','warn','bad','good','pA','pB','pC'].forEach(n => C[n] = cs.getPropertyValue('--' + n).trim()); }
+
+/* ---------- scenarios ---------- */
+function buildScen(){
+  $('#scenBtns').innerHTML = SCEN.map((s, i) => `<button type="button" data-i="${i}"><b>${s.free ? '★' : i + 1}</b>${simple ? SIMPLE[i].short : s.short}</button>`).join('');
+  document.querySelectorAll('#scenBtns button').forEach(b => b.addEventListener('click', () => loadScen(+b.dataset.i)));
+}
+function loadScen(i){
+  scen = i; const s = SCEN[i];
+  document.querySelectorAll('#scenBtns button').forEach(b => { b.setAttribute('aria-pressed', +b.dataset.i === i); b.classList.toggle('done', done.has(+b.dataset.i)); });
+  $('#task').innerHTML = simple ? SIMPLE[i].task : `<b>${s.title}.</b> ${s.task}`;
+  setLen(s.len, true); setLoad(s.load, true); setConn(s.conn, true); setFeedBtn(s.feed || 'urd');
+  newSim(); buildScene(); drawCoil(); syncCuts();
+}
+
+/* ---------- scene ---------- */
+const CUT_X = [96, 136, 176], CAN_X = [330, 400, 470], CAN_Y = 104, CAN_W = 48, CAN_H = 88, GR = 222;
+const PM_Y = 126, PM_W = 58, PM_H = GR - 6 - 126; // pad-mount cabinet
+let BOX = { y: CAN_Y, h: CAN_H };
+function buildScene(){
+  const s = [];
+  s.push(`<rect x="0" y="0" width="640" height="${GR}" style="fill:var(--sky)"/><rect x="0" y="${GR}" width="640" height="40" style="fill:var(--ground)"/>`);
+  [0,1,2].forEach(k => s.push(`<path class="cond" d="M0 ${24+k*4}Q40 ${32+k*4} ${CUT_X[k]} 30" style="stroke:${PH_COL[k]};stroke-width:2"/>`));
+  s.push(`<text class="sm" x="6" y="14">12.47 kV feeder</text>`);
+  s.push(`<rect x="55" y="20" width="10" height="${GR-20}" rx="2" style="fill:var(--pole)"/><rect x="40" y="44" width="160" height="7" rx="2" style="fill:var(--pole)"/>`);
+  const oh = sim && sim.feed === 'oh';
+  if (oh) { // second pole carries the bank; overhead span from the cutout pole
+    s.push(`<rect x="${CAN_X[1]-5}" y="34" width="10" height="${GR-34}" rx="2" style="fill:var(--pole)"/><rect x="${CAN_X[0]-30}" y="${CAN_Y+CAN_H/2-4}" width="${CAN_X[2]-CAN_X[0]+60}" height="8" rx="2" style="fill:var(--pole)"/>`);
+  }
+  [0,1,2].forEach(k => { const rx = 68 + k*4, uy = 232 + k*8;
+    const d = oh ? `M${CUT_X[k]} 110 Q${(CUT_X[k] + CAN_X[k])/2} ${128 + k*7} ${CAN_X[k]-9} ${CAN_Y-16}`
+                 : `M${CUT_X[k]} 112V122H${rx}V${uy}H${CAN_X[k]+14}V${GR-14}`;
+    s.push(`<path class="cond" d="${d}" style="stroke:${PH_COL[k]};stroke-width:2.5"/><path class="dot" id="dot${k}" d="${d}"/>`); });
+  s.push(`<g id="coil"></g><text class="sm" id="lenTag" x="${oh ? 300 : 205}" y="${oh ? 248 : 259}" text-anchor="middle"></text>`);
+  [0,1,2].forEach(k => { const x = CUT_X[k];
+    s.push(`<g class="tap" id="tap${k}" tabindex="0" role="button"><rect class="hit" x="${x-18}" y="20" width="36" height="98"/>
+      <path d="M${x} 30V60" style="stroke:var(--wire);stroke-width:2"/><rect x="${x-6}" y="58" width="12" height="6" rx="1" style="fill:var(--muted)"/>
+      <line class="fuse" id="fuse${k}" x1="${x}" y1="104" x2="${x}" y2="64"/><rect x="${x-6}" y="104" width="12" height="6" rx="1" style="fill:var(--muted)"/>
+      <text class="lab" x="${x}" y="22" text-anchor="middle" style="fill:${PH_COL[k]}">${NAMES[k]}</text></g>`); });
+  BOX = oh ? { y: CAN_Y, h: CAN_H } : { y: PM_Y, h: PM_H };
+  if (!oh) s.push(`<rect x="${CAN_X[0]-40}" y="${GR-6}" width="${CAN_X[2]-CAN_X[0]+80}" height="8" rx="1" style="fill:var(--pad)"/>`);
+  s.push(`<text class="sm" id="connTag" x="${CAN_X[1]}" y="${oh ? GR-9 : GR+13}" text-anchor="middle" style="fill:var(--ink)!important"></text>`);
+  if (oh) {
+    s.push(`<defs>${[0,1,2].map(k => `<clipPath id="cl${k}"><rect x="${CAN_X[k]-CAN_W/2}" y="${CAN_Y}" width="${CAN_W}" height="${CAN_H}" rx="8"/></clipPath>`).join('')}</defs>`);
+    [0,1,2].forEach(k => { const x = CAN_X[k], L = x - CAN_W/2;
+      s.push(`<text id="vt${k}" x="${x}" y="${CAN_Y-30}" text-anchor="middle" style="font-family:var(--f-mono);font-size:13px">1.00</text>`);
+      s.push(`<g id="can${k}"><rect x="${x-12}" y="${CAN_Y-16}" width="7" height="12" rx="2" style="fill:var(--muted)"/>
+        <rect id="arr${k}" x="${x+6}" y="${CAN_Y-22}" width="8" height="18" rx="2" style="fill:var(--muted)"/>
+        <rect x="${L-3}" y="${CAN_Y-6}" width="${CAN_W+6}" height="9" rx="4" style="fill:var(--can);stroke:var(--ink);stroke-width:2"/>
+        <rect x="${L}" y="${CAN_Y}" width="${CAN_W}" height="${CAN_H}" rx="8" style="fill:var(--can)"/>
+        <g clip-path="url(#cl${k})"><rect id="fill${k}" x="${L}" y="${CAN_Y+CAN_H}" width="${CAN_W}" height="0" style="fill:var(--bad)"/></g>
+        <rect id="edge${k}" x="${L}" y="${CAN_Y}" width="${CAN_W}" height="${CAN_H}" rx="8" style="fill:none;stroke:var(--ink);stroke-width:2.5"/>
+        <text x="${x}" y="${CAN_Y+38}" text-anchor="middle" class="lab" style="font-size:24px;fill:#15211b;paint-order:stroke;stroke:var(--can);stroke-width:4">${NAMES[k]}</text>
+        <text id="pct${k}" x="${x}" y="${CAN_Y+CAN_H-10}" text-anchor="middle" style="font-family:var(--f-mono);font-size:11px;fill:#15211b;paint-order:stroke;stroke:var(--can);stroke-width:3">0%</text></g>`); });
+    s.push(`<path d="M${CAN_X[2]+24} ${CAN_Y+20}Q560 ${CAN_Y+40} 620 ${GR-40}" style="fill:none;stroke:var(--wire);stroke-width:1.5"/>`);
+  } else {
+    // single-phase pad-mount transformers: green cabinet on a concrete pad, cable up from below into the elbow
+    const GRN = '#7f9c75', GRN_D = '#4f6b48';
+    s.push(`<defs>${[0,1,2].map(k => `<clipPath id="cl${k}"><rect x="${CAN_X[k]-PM_W/2}" y="${PM_Y}" width="${PM_W}" height="${PM_H}" rx="4"/></clipPath>`).join('')}</defs>`);
+    [0,1,2].forEach(k => { const x = CAN_X[k], L = x - PM_W/2, B = PM_Y + PM_H;
+      s.push(`<text id="vt${k}" x="${x}" y="${PM_Y-10}" text-anchor="middle" style="font-family:var(--f-mono);font-size:13px">1.00</text>`);
+      s.push(`<g id="can${k}">
+        <rect x="${L}" y="${PM_Y}" width="${PM_W}" height="${PM_H}" rx="4" style="fill:${GRN}"/>
+        <g clip-path="url(#cl${k})"><rect id="fill${k}" x="${L}" y="${B}" width="${PM_W}" height="0" style="fill:var(--bad)"/></g>
+        <rect x="${L-2}" y="${PM_Y-3}" width="${PM_W+4}" height="7" rx="3" style="fill:${GRN_D}"/>
+        <line x1="${x}" y1="${PM_Y+6}" x2="${x}" y2="${B-4}" style="stroke:${GRN_D};stroke-width:1.5"/>
+        <rect x="${x+4}" y="${PM_Y+PM_H/2-8}" width="4" height="16" rx="1" style="fill:${GRN_D}"/>
+        <circle cx="${x-8}" cy="${PM_Y+PM_H/2}" r="2.5" style="fill:${GRN_D}"/>
+        <path d="M${x+14} ${B} V${B-14} Q${x+14} ${B-20} ${x+20} ${B-20}" style="fill:none;stroke:var(--ink);stroke-width:3.5;stroke-linecap:round"/>
+        <rect id="arr${k}" x="${x-23}" y="${B-30}" width="8" height="22" rx="2" style="fill:var(--muted)"/>
+        <rect id="edge${k}" x="${L}" y="${PM_Y}" width="${PM_W}" height="${PM_H}" rx="4" style="fill:none;stroke:var(--ink);stroke-width:2.5"/>
+        <text x="${x}" y="${PM_Y+34}" text-anchor="middle" class="lab" style="font-size:24px;fill:#15211b;paint-order:stroke;stroke:#e8efe6;stroke-width:4">${NAMES[k]}</text>
+        <text id="pct${k}" x="${x}" y="${PM_Y+52}" text-anchor="middle" style="font-family:var(--f-mono);font-size:11px;fill:#15211b;paint-order:stroke;stroke:#e8efe6;stroke-width:3">0%</text></g>`); });
+    s.push(`<path d="M${CAN_X[2]+PM_W/2} ${GR-18} H524" style="fill:none;stroke:var(--wire);stroke-width:1.5"/>`);
+  }
+  [[520,0],[572,1]].forEach(([x,n]) => s.push(`<path d="M${x} ${GR-40}L${x+24} ${GR-60}L${x+48} ${GR-40}Z" style="fill:var(--roof)"/>
+    <rect x="${x+4}" y="${GR-40}" width="40" height="40" style="fill:var(--house)"/>
+    <rect id="w${n}a" x="${x+9}" y="${GR-33}" width="11" height="10" style="fill:var(--winoff)"/><rect id="w${n}b" x="${x+28}" y="${GR-33}" width="11" height="10" style="fill:var(--winoff)"/>
+    <rect x="${x+18}" y="${GR-16}" width="11" height="16" style="fill:var(--roof)"/>`));
+  s.push(`<text class="lab" x="570" y="${GR-68}" text-anchor="middle" style="fill:var(--muted)"><tspan class="techOnly">LOAD</tspan><tspan class="simpleOnly">HOMES</tspan></text>`);
+  s.push(`<g class="simpleOnly" style="font-size:16px;font-weight:600">
+    <text x="204" y="84" style="fill:var(--ink)">◂ switches</text><text x="216" y="102" style="fill:var(--muted);font-size:14px">(cutouts)</text>
+    <text x="${CAN_X[1]}" y="${oh ? CAN_Y-50 : PM_Y-30}" text-anchor="middle" style="fill:var(--ink)">${oh ? 'transformers' : 'pad-mount transformers'}</text>
+    ${oh ? `<text x="${CAN_X[2]+32}" y="${CAN_Y-14}" style="fill:var(--ink)">◂ arrester</text>
+    <text x="${CAN_X[2]+44}" y="${CAN_Y+3}" style="fill:var(--muted);font-size:14px">(relief valve)</text>`
+      : `<text x="${CAN_X[0]-34}" y="${GR-24}" text-anchor="end" style="fill:var(--ink)">arrester ▸</text>
+    <text x="${CAN_X[0]-34}" y="${GR-8}" text-anchor="end" style="fill:var(--muted);font-size:14px">(relief valve)</text>`}</g>`);
+  s.push(`<text x="634" y="258" text-anchor="end" style="font-size:10px;fill:var(--muted);opacity:.85">${OWNER}</text>`);
+  $('#scene').innerHTML = s.join('');
+  if ($('#connTag') && sim) $('#connTag').textContent = CONN_TXT[sim.conn] + ' primary';
+  [0,1,2].forEach(k => { const g = $('#tap'+k); g.addEventListener('click', () => toggle(k));
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(k); } }); });
+}
+function drawCoil(){
+  if (sim.feed === 'oh') { $('#coil').innerHTML = ''; $('#lenTag').textContent = `${sim.lengthFt.toLocaleString()} ft overhead line${simple ? ' (stores very little energy)' : ''}`; return; }
+  const n = Math.max(1, Math.round(sim.lengthFt / 300)), x0 = 120, x1 = 290, st = (x1 - x0)/n;
+  $('#coil').innerHTML = Array.from({length: n}, (_, i) => `<ellipse cx="${x0 + st*(i+.5)}" cy="240" rx="${Math.max(5, st*.42)}" ry="8" style="fill:none;stroke:var(--wire);stroke-width:2;opacity:.55"/>`).join('');
+  $('#lenTag').textContent = `${sim.lengthFt.toLocaleString()} ft underground cable (URD)${simple ? ', stores energy like a battery' : ''}`;
+}
+function buildCuts(){
+  $('#cuts').innerHTML = [0,1,2].map(k => `<button type="button" class="btn cut" id="cb${k}" style="--k:${PH_COL[k]}"><b>${NAMES[k]}</b><small></small></button>`).join('');
+  [0,1,2].forEach(k => $('#cb'+k).addEventListener('click', () => toggle(k)));
+}
+function toggle(k){
+  const p = sim.ph[k];
+  if (p.cut === 'closed') { if (pending[k]) return; pending[k] = true; run.opened.push(NAMES[k]); run.actions.push(['open', k]); run.shown = false; run.quietSince = null; run.restoredSince = null; }
+  else {
+    if (p.arrFailed) return;
+    p.cut = 'closed'; p.heat = 0; openAt[k] = null; p.l = -Math.cos(sim.t + PH[k]); // fuse links ride through inrush, so start the closed winding in steady state
+    run.actions.push(['close', k]); run.shown = false; run.quietSince = null; run.restoredSince = null;
+    // the phases still open are now back-fed: start their settling clock
+    [0,1,2].forEach(j => { if (sim.ph[j].cut !== 'closed' && !sim.ph[j].arrFailed) openAt[j] = sim.t; });
+    if (sim.ph.some(q => q.cut !== 'closed') && !run.openWall) run.openWall = performance.now();
+  }
+  syncCuts();
+}
+function syncCuts(){
+  sim.ph.forEach((p, k) => { const x = CUT_X[k], f = $('#fuse'+k), st = pending[k] ? 'opening' : p.cut;
+    if (p.cut === 'closed' && !pending[k]) { f.setAttribute('x2', x); f.setAttribute('y2', 64); f.style.stroke = ''; }
+    else { f.setAttribute('x2', x + 26); f.setAttribute('y2', 84); f.style.stroke = p.cut === 'blown' ? 'var(--bad)' : 'var(--warn)'; }
+    const b = $('#cb'+k); b.dataset.st = st; b.querySelector('small').textContent = st === 'blown' ? 'blown' : st;
+    const lab = `Cutout ${NAMES[k]}, ${st}. Press to ${p.cut === 'closed' ? 'open' : 'close'}.`; b.setAttribute('aria-label', lab); $('#tap'+k).setAttribute('aria-label', lab); });
+}
+function setLen(v, quiet){ $('#len').value = v; $('#lenO').textContent = (+v).toLocaleString() + ' ft'; if (sim) { sim.lengthFt = +v; drawCoil(); } }
+function setLoad(v){ $('#load').value = v; $('#loadO').textContent = v + '%'; if (sim) sim.loadPct = +v; }
+function setFeedBtn(v){ document.querySelectorAll('#feed button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v)); }
+function setFeed(v){ setFeedBtn(v); if (sim) { sim.feed = v; buildScene(); drawCoil(); syncCuts(); } }
+function setConn(v){ document.querySelectorAll('#conn button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v)); $('#connTag').textContent = CONN_TXT[v] + ' primary'; if (sim) sim.conn = v; }
+
+/* ---------- canvas ---------- */
+function fit(cv){ const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return null;
+  if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)) { cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return { ctx, w, h }; }
+function drawScope(){
+  const f = fit($('#scope')); if (!f) return; const { ctx, w, h } = f;
+  ctx.fillStyle = C['panel-2']; ctx.fillRect(0, 0, w, h);
+  const x0 = 28, x1 = w - 8, y0 = 8, y1 = h - 8, ym = (y0+y1)/2, half = (y1-y0)/2, VM = 3;
+  const Y = v => ym - Math.max(-VM, Math.min(VM, v))/VM*half;
+  ctx.font = '11px "IBM Plex Mono", monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  if (simple) { ctx.globalAlpha = .13; ctx.fillStyle = C.good; ctx.fillRect(x0, Y(1), x1 - x0, Y(-1) - Y(1)); ctx.globalAlpha = 1; }
+  [-3,-2,-1,0,1,2,3].forEach(v => { ctx.strokeStyle = v === 0 ? C.line : C.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, Y(v)); ctx.lineTo(x1, Y(v)); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(simple ? (v ? Math.abs(v) + '×' : '0') : v, x0 - 5, Y(v)); });
+  if (simple) { ctx.textAlign = 'left'; ctx.font = '600 12px Barlow, sans-serif'; ctx.fillStyle = C.good; ctx.fillText('normal', x0 + 6, Y(0.55)); ctx.textAlign = 'right'; ctx.font = '11px "IBM Plex Mono", monospace'; }
+  ctx.setLineDash([6,5]); ctx.strokeStyle = C.bad; ctx.lineWidth = 1.5; [KNEE,-KNEE].forEach(v => { ctx.beginPath(); ctx.moveTo(x0, Y(v)); ctx.lineTo(x1, Y(v)); ctx.stroke(); }); ctx.setLineDash([]);
+  ctx.textAlign = 'right'; ctx.font = '600 12px Barlow, sans-serif'; ctx.fillStyle = C.bad; ctx.fillText(simple ? 'too high: arrester has to dump the extra' : 'arrester line', x1 - 6, Y(KNEE) - 9);
+  const n = buf.length; if (n < 2) return;
+  const X = j => x0 + (x1 - x0)*(j + BUF - n)/(BUF - 1);
+  [C.pA, C.pB, C.pC].forEach((col, k) => { ctx.strokeStyle = col; ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.beginPath();
+    buf.forEach((s, j) => j ? ctx.lineTo(X(j), Y(s[k])) : ctx.moveTo(X(j), Y(s[k]))); ctx.stroke();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(n-1), Y(buf[n-1][k]), 5, 0, 7); ctx.fill(); });
+}
+const G = { pts: [], len: [], tot: 0, e: [], dom: [] };
+(function(){
+  const P = [[124,108],[150,108],[150,62],[176,62],[176,92]], turns = 8, t0 = 96, t1 = 186, pi = (t1-t0)/turns;
+  for (let t = 0; t < turns; t++) { const y = t0 + t*pi; P.push([182,y],[226,y+pi/2],[182,y+pi]); }
+  P.push([176,t1+4],[176,226],[390,226]);
+  G.pts = P; G.len = [0]; for (let i = 1; i < P.length; i++) G.len.push(G.len[i-1] + Math.hypot(P[i][0]-P[i-1][0], P[i][1]-P[i-1][1]));
+  G.tot = G.len[G.len.length-1]; G.e = Array.from({length: 80}, (_, i) => ({ s: i/80*G.tot, ph: Math.random()*6.28 }));
+  let seed = 11; const r = () => (seed = (seed*16807) % 2147483647)/2147483647;
+  for (let y = 70; y <= 202; y += 12) { G.dom.push({x:203,y,d:-Math.PI/2,b:r()*6.28}); G.dom.push({x:317,y,d:Math.PI/2,b:r()*6.28}); }
+  for (let x = 222; x <= 300; x += 13) { G.dom.push({x,y:72,d:0,b:r()*6.28}); G.dom.push({x,y:200,d:Math.PI,b:r()*6.28}); }
+})();
+function ptAt(s){ s = ((s % G.tot) + G.tot) % G.tot; let i = 1; while (i < G.len.length && G.len[i] < s) i++;
+  const a = G.pts[i-1], b = G.pts[i], f = (s - G.len[i-1])/(G.len[i] - G.len[i-1] || 1); return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f]; }
+function insidePhase(){ const o = sim.ph.findIndex(p => p.cut !== 'closed' && !p.arrFailed); return o >= 0 ? o : 1; }
+function drawInside(now, dt){
+  const f = fit($('#scope')); if (!f) return; const { ctx, w, h } = f;
+  ctx.fillStyle = C['panel-2']; ctx.fillRect(0, 0, w, h);
+  const sc = Math.min(w/400, h/200), ox = (w - 400*sc)/2, oy = (h - 200*sc)/2 - 40*sc;
+  ctx.save(); ctx.translate(ox, oy); ctx.scale(sc, sc);
+  const k = insidePhase(), p = sim.ph[k], v = p.vg || 0, i = p.i || 0, lam = p.l || 0, sat = Math.abs(lam) > 1;
+  ctx.font = '700 15px "Barlow Condensed", sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = [C.pA, C.pB, C.pC][k]; ctx.fillText(`CAN ${NAMES[k]}`, 30, 58);
+  ctx.font = '11px Barlow, sans-serif'; ctx.fillStyle = C.muted; ctx.fillText('cable', 30, 98); ctx.fillText('ground', 30, 188);
+  ctx.fillStyle = C.ink; ctx.fillRect(30, 102, 94, 6); ctx.fillStyle = C.muted; ctx.fillRect(30, 168, 94, 6);
+  const nq = Math.min(9, Math.round(Math.abs(v)*3)); ctx.font = '700 14px "IBM Plex Mono", monospace';
+  for (let q = 0; q < nq; q++) { const x = 32 + q*10; ctx.fillStyle = v > 0 ? C.bad : C.i; ctx.fillText(v > 0 ? '+' : '−', x, 124); ctx.fillStyle = v > 0 ? C.i : C.bad; ctx.fillText(v > 0 ? '−' : '+', x, 162); }
+  ctx.textAlign = 'center'; ctx.font = '600 12px "IBM Plex Mono", monospace'; ctx.fillStyle = Math.abs(v) > KNEE ? C.bad : C.ink; ctx.fillText(`${Math.abs(v).toFixed(2)}`, 77, 145);
+  ctx.fillStyle = sat ? 'rgba(192,57,43,.18)' : C.panel; ctx.strokeStyle = sat ? C.bad : C.muted; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.rect(190, 60, 140, 152); ctx.rect(216, 84, 88, 104); ctx.fill('evenodd'); ctx.stroke();
+  const al = Math.min(1, Math.abs(lam)), sg = lam >= 0 ? 0 : Math.PI;
+  G.dom.forEach(d => { const t = d.d + sg, df = ((t - d.b + Math.PI*3) % (Math.PI*2)) - Math.PI, a = d.b + df*Math.pow(al, 1.6), c = sat ? C.bad : C.muted;
+    ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 1.6; const dx = Math.cos(a)*4.5, dy = Math.sin(a)*4.5;
+    ctx.beginPath(); ctx.moveTo(d.x-dx, d.y-dy); ctx.lineTo(d.x+dx, d.y+dy); ctx.stroke(); ctx.beginPath(); ctx.arc(d.x+dx, d.y+dy, 1.4, 0, 7); ctx.fill(); });
+  ctx.strokeStyle = '#c9823a'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath(); G.pts.forEach((pt, n) => n ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1])); ctx.stroke();
+  ctx.font = '11px Barlow, sans-serif'; ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.fillText('winding', 128, 152); ctx.fillText('iron core', 236, 54); ctx.fillText('to the other cans', 260, 220);
+  const ai = Math.abs(i);
+  if (running && !modal) { const drift = Math.sign(i)*Math.min(10, 2.4*Math.pow(ai, .7))*(speed/0.35)*dt*60; G.e.forEach(e => e.s += drift); }
+  const jit = Math.min(4, .3 + 1.6*Math.pow(ai, .6)); ctx.fillStyle = C.i;
+  G.e.forEach(e => { const [x, y] = ptAt(e.s), t = now/70 + e.ph; ctx.beginPath(); ctx.arc(x + Math.cos(t*1.7)*jit, y + Math.sin(t*2.3)*jit, 2.2, 0, 7); ctx.fill(); });
+  if (sat) { ctx.textAlign = 'center'; ctx.fillStyle = C.bad; ctx.font = '700 16px "Barlow Condensed", sans-serif'; ctx.fillText('SATURATED', 260, 138); }
+  ctx.restore();
+}
+
+/* ---------- status + outcome ---------- */
+function peaks(span){ const pv = [0,0,0]; for (let j = Math.max(0, buf.length - span); j < buf.length; j++) for (let k = 0; k < 3; k++) pv[k] = Math.max(pv[k], Math.abs(buf[j][k])); return pv; }
+const secs = () => Math.round((performance.now() - run.openWall)/1000);
+const gCans = () => sim.conn === 'gwye' && sim.feed === 'oh', gPad = () => sim.conn === 'gwye' && sim.feed !== 'oh';
+function status(){
+  const cyc = Math.ceil(2*Math.PI/SAMP), pv = peaks(cyc), pvL = peaks(BUF);
+  const settled = k => openAt[k] !== null && sim.t - openAt[k] > 2*Math.PI*4;
+  const sustained = k => { if (buf.length < 2*cyc) return false; for (let c = 0; c < 2; c++) { let m = 0; for (let j = buf.length - (c+1)*cyc; j < buf.length - c*cyc; j++) m = Math.max(m, Math.abs(buf[j][k])); if (m < 1.3) return false; } return true; };
+  const open = [0,1,2].filter(k => sim.ph[k].cut !== 'closed'), live = open.length && open.length < 3;
+  const ferro = live && open.some(k => !sim.ph[k].arrFailed && settled(k) && (ferroOn ? pvL[k] > 1.15 : sustained(k)));
+  if (ferro && !ferroOn && run.ferroAt === null) run.ferroAt = Math.max(1, secs());
+  ferroOn = ferro;
+  const vmax = Math.max(...pv);
+  open.forEach(k => { if (!sim.ph[k].arrFailed && settled(k)) run.maxOpenV = Math.max(run.maxOpenV, pv[k]); });
+  sim.ph.forEach((p, k) => { if (p.cut === 'blown' && !run.fuses.some(f => f.k === k)) run.fuses.push({ k, fault: sim.ph.some(q => q.arrFailed) });
+    if (p.arrFailed && !run.arr) run.arr = { k, at: secs() }; });
+  // outcome triggers
+  if (live) { run.everLive = true; if (!run.liveOpen) run.liveOpen = open.map(k => NAMES[k]).join(' and '); }
+  if (ferro && !run.ferroOpen) run.ferroOpen = open.filter(k => !sim.ph[k].arrFailed).map(k => NAMES[k]).join(' and ');
+  const failed = sim.ph.some(p => p.arrFailed || p.cut === 'blown');
+  const allClosed = open.length === 0 && !pending.some(Boolean);
+  if (allClosed && run.everLive && !failed) { if (run.restoredSince === null) run.restoredSince = performance.now(); } else run.restoredSince = null;
+  const quiet = live && !ferro && open.every(k => settled(k));
+  if (ferro) { if (run.ferroSince === null) run.ferroSince = sim.t; } else run.ferroSince = null;
+  if (quiet) { if (run.quietSince === null) run.quietSince = performance.now(); } else run.quietSince = null;
+  if (!run.shown && running && !tutOn && !modal) {
+    if (failed && run.fuses.length >= (run.arr ? 1 : 1)) { run.shown = true; setTimeout(() => showOutcome(), 900); }
+    else if (quiet && !run.outage && performance.now() - run.quietSince > 5000 / Math.max(0.5, speed/0.35)) { run.shown = true; showOutcome(); }
+    else if (ferro && !run.outage && run.ferroSince !== null && sim.t - run.ferroSince > 2*Math.PI*45) { run.shown = true; showOutcome(); }
+    else if (run.restoredSince !== null && performance.now() - run.restoredSince > 2500) { run.shown = true; showOutcome(); }
+  }
+  // status text
+  const on = open.map(k => NAMES[k]).join(' and '), hot = [0,1,2].filter(k => sim.ph[k].cut === 'closed').map(k => NAMES[k]).join(' and ');
+  let big, small, col = 'var(--ink)';
+  if (sim.ph.some(p => p.arrFailed)) { big = 'ARRESTER FAILED'; col = 'var(--bad)'; small = 'The arrester overheated and shorted to ground. That fault blew the fuses.'; }
+  else if (open.length === 3 && !sim.ph.some(p => p.cut === 'blown')) { big = 'DE-ENERGIZED'; col = 'var(--muted)'; small = run.outage ? 'Bank is out after an outage. Close the cutouts one at a time to restore it.' : 'All three open. Nothing is feeding the bank.'; }
+  else if (ferro || (live && open.some(k => !sim.ph[k].arrFailed && openAt[k] !== null && sustained(k)))) { big = 'FERRORESONANCE'; col = 'var(--bad)'; small = `${on} ${open.length > 1 ? 'are' : 'is'} open but ringing at ${vmax.toFixed(1)}× normal voltage. The ${hot} fuse${hot.includes('and') ? 's are' : ' is'} carrying the core's current spikes.`; }
+  else if (sim.ph.some(p => p.cut === 'blown')) { big = 'FUSE BLOWN'; col = 'var(--bad)'; small = 'A fuse melted from the core\'s current spikes.'; }
+  else if (pending.some(Boolean)) { big = 'OPENING…'; col = 'var(--warn)'; small = 'The fuse arc goes out at the next current zero.'; }
+  else if (open.length) { big = 'SINGLE-PHASED'; col = 'var(--warn)'; small = gCans() ? `${on} ${open.length > 1 ? 'are' : 'is'} open and quiet. Separate grounded cans have no path to back-feed it.` : gPad() ? `${on} ${open.length > 1 ? 'are' : 'is'} open. The shared core still couples some voltage in, but it is stable so far.` : `${on} ${open.length > 1 ? 'are' : 'is'} open and back-fed, but stable so far.`; }
+  else { big = 'NORMAL'; col = 'var(--good)'; small = 'All three cutouts closed. Open one to start.'; }
+  if (simple) {
+    const ringing = big === 'FERRORESONANCE', nm = open.map(k => NAMES[k]).join(' and ');
+    if (big === 'ARRESTER FAILED') { big = 'ARRESTER BURNED OUT'; small = `The arrester on ${NAMES[run.arr ? run.arr.k : 1]} overheated and shorted to ground. That short blew the other fuses.`; }
+    else if (big === 'DE-ENERGIZED') { big = run.outage ? 'POWER OUT' : 'ALL OFF'; small = run.outage ? 'All three switches are open after an outage. Close switch A to start restoring power.' : 'All three switches are open. Nothing is feeding the transformers.'; }
+    else if (ringing) { const pl = open.length > 1; big = 'SWINGING OUT OF CONTROL'; small = `${pl ? 'Switches ' + nm + ' are' : 'Switch ' + nm + ' is'} open, but the voltage is swinging to ${vmax.toFixed(1)}× normal. The cable and transformer${pl ? 's' : ''} ${nm} are passing energy back and forth with nothing to slow them down.`; }
+    else if (big === 'FUSE BLOWN') { small = 'A fuse melted from the extra current.'; }
+    else if (big === 'OPENING…') { small = `${NAMES[pending.indexOf(true)]}'s switch is opening.`; }
+    else if (big === 'SINGLE-PHASED') { const pl = open.length > 1, sw = pl ? 'Switches ' + nm + ' are' : 'Switch ' + nm + ' is'; big = pl ? 'SWITCHES OPEN, CALM' : 'SWITCH OPEN, CALM'; small = gCans() ? `${sw} open and ${nm} ${pl ? 'are' : 'is'} dead, like ${pl ? 'they' : 'it'} should be. The grounded wiring keeps it that way.` : gPad() ? `${sw} open. The shared iron core still pushes a little voltage into ${nm}, but it's calm${quiet ? '' : ' so far'}.` : `${sw} open. ${nm} still get${pl ? '' : 's'} some voltage fed backwards from the other transformer${pl ? '' : 's'}, but it's calm${quiet ? '' : ' so far'}.${run.outage ? ' Close the rest to finish restoring.' : ''}`; }
+    else if (big === 'NORMAL') { big = 'ALL NORMAL'; small = 'All three switches closed. Every transformer gets normal voltage. Open B to begin.'; }
+  }
+  if (view === 'inside') small = simple ? `Inside transformer ${NAMES[insidePhase()]}: the blue dots are electrons moving in the copper wire. They shake harder as more current flows. The little arrows in the iron line up as it fills with magnetism. When they all line up, the iron is full, and current spikes.` : `Inside can ${NAMES[insidePhase()]}: blue dots are electrons. They shake harder as current rises. When the iron arrows all line up, the core is saturated.`;
+  $('#vBig').textContent = big; $('#vBig').style.color = col; $('#vSmall').textContent = small;
+  // coach tips (simple mode)
+  if (simple && tipsOn && running && !modal && !tutOn && !run.shown) {
+    const ko = open.find(k => openAt[k] !== null && sim.t - openAt[k] > 2*Math.PI*1.5);
+    const kf = open.find(k => !sim.ph[k].arrFailed);
+    if (ko !== undefined && !run.tips.open && !sim.ph[ko].arrFailed) { run.tips.open = true;
+      const N = NAMES[ko], others = [0,1,2].filter(j => j !== ko).map(j => NAMES[j]).join(' and ');
+      if (run.outage) {
+        const cl = [0,1,2].filter(j => sim.ph[j].cut === 'closed'), op = [0,1,2].filter(j => sim.ph[j].cut !== 'closed');
+        const cN = cl.map(j => NAMES[j]).join(' and '), oN = op.map(j => NAMES[j]).join(' and '), pl = op.length > 1;
+        const tail = gCans() ? `With grounded-wye wiring and separate cans, ${oN} can't be fed backwards, so ${pl ? 'they stay' : 'it stays'} dead.`
+          : gPad() ? `The wiring is grounded, but this pad-mount's phases share one iron core, so ${oN} still ${pl ? 'get' : 'gets'} a weak push through the iron. Watch the meter.`
+          : sim.feed === 'oh' ? `${oN} ${pl ? 'are' : 'is'} only connected to a short run of overhead wire, which stores very little energy. Watch the meter anyway.`
+          : `${oN} ${pl ? 'are' : 'is'} still switched off, so ${pl ? 'their transformers have' : 'its transformer has'} nothing on ${pl ? 'them' : 'it'} but the long underground cable. This is the risky moment. Watch the meter.`;
+        coach('#scene', 'The in-between moment', `You closed ${cN}. Transformer${cl.length > 1 ? 's' : ''} ${cN} ${cl.length > 1 ? 'are' : 'is'} on, and ${cl.length > 1 ? 'they feed' : 'it feeds'} ${oN} backwards through the bank. ${tail}`);
+      }
+      else if (gCans()) coach('#can' + ko, `${N} is switched off`, `You opened ${N}'s switch, and the number over ${N} dropped to almost zero, like it should. With grounded-wye wiring and separate cans, ${others} can't feed ${N} backwards.`);
+      else if (gPad()) coach('#can' + ko, `${N} is switched off… mostly`, `You opened ${N}'s switch. Grounded-wye wiring means ${others} can't feed ${N} backwards through the wires, but in a three-phase pad-mount all three share one iron core. Look at the number over ${N}: it still gets some voltage through the iron. Watch ${N}'s ${COLOR_NAME[ko]} line.`);
+      else coach('#can' + ko, `${N} is switched off… right?`, `You opened ${N}'s switch, so transformer ${N} should be dead. Look at the number over ${N}: it still has voltage. Transformers ${others} are feeding it backwards. Now watch ${N}'s ${COLOR_NAME[ko]} line on the meter.`);
+    }
+    else if (ferro && !run.tips.ferro && kf !== undefined) { run.tips.ferro = true;
+      const N = NAMES[kf];
+      coach('#meterCard', 'Now it\'s swinging out of control', `${N}'s ${COLOR_NAME[kf]} line is shooting past the red line on every swing. The underground cable stores energy and ${N}'s iron core stores energy, and they hand it back and forth like a swing being pushed higher and higher. Nothing is dragging its feet to slow it down.`);
+    }
+    else if (!run.tips.arr && run.tips.ferro) { const ka = sim.ph.findIndex(p => !p.arrFailed && p.arr > 0.35);
+      if (ka >= 0) { run.tips.arr = true;
+        coach('#arr' + ka, 'The arrester is taking the hits', `This is the arrester, a pressure-relief valve for voltage. Every time ${NAMES[ka]} goes over the red line, it dumps the extra to ground and heats up. Watch transformer ${NAMES[ka]} fill with red. It can't take this for long.`); } }
+  }
+  // cans
+  sim.ph.forEach((p, k) => {
+    const hf = p.cut === 'blown' ? 1 : Math.min(1, p.heat/(FUSE_TRIP*TAU_H)), af = Math.min(1, p.arr/ARR_FAIL), ov = Math.max(0, Math.min(1, (pv[k]-1.15)/2.2));
+    const tgt = p.arrFailed ? 1 : Math.max(hf, af, ov*.5); fillL[k] += (tgt - fillL[k])*(tgt > fillL[k] ? .05 : .02);
+    const hg = fillL[k]*BOX.h, fr = $('#fill'+k); fr.setAttribute('y', BOX.y + BOX.h - hg); fr.setAttribute('height', hg);
+    $('#pct'+k).textContent = Math.round(fillL[k]*100) + '%';
+    $('#edge'+k).style.stroke = fillL[k] > .75 ? 'var(--bad)' : 'var(--ink)';
+    $('#can'+k).classList.toggle('shake', running && !modal && Math.abs(p.l) > 1.05 && !reduced);
+    $('#arr'+k).style.fill = p.arrFailed ? 'var(--ink)' : af > .05 ? 'var(--bad)' : 'var(--muted)';
+    const vt = $('#vt'+k); vt.textContent = p.arrFailed ? (simple ? 'SHORTED' : 'FAULT') : simple ? pv[k].toFixed(1) + '×' : pv[k].toFixed(2); vt.style.fill = p.arrFailed || pv[k] > KNEE ? 'var(--bad)' : 'var(--ink)';
+  });
+  const lit = sim.ph.some(p => p.cut === 'closed') ? sim.loadPct : 0;
+  ['0a','0b','1a','1b'].forEach((id, n) => { const o = lit > n*12, fl = o && ferro && running && Math.random() < .25; $('#w'+id).style.fill = o && !fl ? 'var(--win)' : 'var(--winoff)'; });
+}
+
+function swingSvg(deg){
+  const r = 62, px = 60, py = 8, a = deg*Math.PI/180, x = px + Math.sin(a)*r, y = py + Math.cos(a)*r;
+  const arc = deg > 2 ? `<path d="M${px - Math.sin(a)*r} ${py + Math.cos(a)*r} A${r} ${r} 0 0 0 ${x} ${y}" style="fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:3 4"/>` : '';
+  return `<svg viewBox="0 0 120 96" aria-hidden="true"><line x1="10" y1="8" x2="110" y2="8" style="stroke:var(--ink);stroke-width:3"/>${arc}
+    <line x1="${px}" y1="${py}" x2="${x}" y2="${y}" style="stroke:var(--ink);stroke-width:2"/><rect x="${x-10}" y="${y-2}" width="20" height="5" rx="2" style="fill:var(--ink)"/>
+    <circle cx="${x}" cy="${y-9}" r="5" style="fill:${deg > 45 ? 'var(--bad)' : deg > 20 ? 'var(--warn)' : 'var(--good)'}"/></svg>`;
+}
+function showOutcome(){
+  const s = SCEN[scen], ss = SIMPLE[scen], r = run, f = [];
+  const changed = [];
+  if (sim.lengthFt !== s.len) changed.push(1); if (sim.loadPct !== s.load) changed.push(1); if (sim.conn !== s.conn) changed.push(1); if (sim.feed !== (s.feed || 'urd')) changed.push(1);
+  const custom = s.free || changed.length;
+  const bad = r.arr || r.fuses.length, rang = r.ferroAt !== null;
+  const kN = r.ferroOpen || r.liveOpen || (r.opened.length ? [...new Set(r.opened)].join(' and ') : 'B');
+  const restored = !bad && sim.ph.every(p => p.cut === 'closed');
+  const seqWords = noun => { if (!r.actions.length) return 'did nothing'; let last = null; const out = r.actions.map(([t, k]) => { const v = t === 'open' ? 'opened' : 'closed'; const w = v !== last ? `${v} ${noun} ${NAMES[k]}` : NAMES[k]; last = v; return w; }); return out.reduce((a, x, i) => i ? a + ', then ' + x : x, ''); };
+  const runTxt = sim.feed === 'oh' ? 'overhead line' : 'underground cable';
+  const selfB = r.fuses.filter(x => !x.fault), faultB = r.fuses.filter(x => x.fault);
+  const list = a => a.map(x => NAMES[x.k]).join(' and ');
+  let head, why, take, swingTxt;
+  if (simple) {
+    if (custom) f.push(['warn', `Your setup: ${sim.lengthFt.toLocaleString()} ft of ${runTxt}, homes using ${sim.loadPct}%, ${CONN_TXT[sim.conn]} wiring.`]);
+    f.push(['', `You ${seqWords('switch')}.`]);
+    if (rang) { f.push(['bad', `While ${kN} ${kN.includes('and') ? 'were' : 'was'} still switched off, ${kN.includes('and') ? 'they' : 'it'} started swinging out of control.`]);
+      f.push(['bad', `It reached ${r.maxOpenV.toFixed(1)}× normal voltage: about ${(Math.round(r.maxOpenV*72)*100).toLocaleString()} volts on a wire meant for 7,200.`]); }
+    else if (restored && r.maxOpenV === 0 && !gCans()) f.push(['good', 'You closed the switches quickly, before anything had time to start swinging.']);
+    else if (r.maxOpenV < 0.3) f.push(['good', `${kN} stayed dead while switched off, like ${kN.includes('and') ? 'they' : 'it'} should.`]);
+    else f.push(['good', `${kN} stayed calm at ${r.maxOpenV.toFixed(1)}× normal or less.`]);
+    if (r.arr) f.push(['bad', `The arrester on ${NAMES[r.arr.k]} (the pressure-relief valve) overheated and shorted to ground.`]);
+    if (faultB.length) f.push(['bad', `That short blew the fuse${faultB.length > 1 ? 's' : ''} on ${list(faultB)}. The whole bank went out.`]);
+    if (selfB.length) f.push(['bad', `The fuse${selfB.length > 1 ? 's' : ''} on ${list(selfB)} melted from the extra current.`]);
+    if (restored) f.push([rang ? 'warn' : 'good', 'Once all three switches were closed, every transformer was fed normally again' + (rang ? ' and the swinging stopped.' : '.')]);
+    head = bad ? 'The bank burned itself up.' : restored ? (rang ? 'Closing the last switch stopped it, this time.' : 'Power restored with no trouble.') : rang ? 'It\'s swinging, but nothing has broken yet.' : `${kN} stayed calm.`;
+    if (!custom) { why = ss.why; swingTxt = ss.swing; }
+    else if (bad || rang) { why = 'The cable stored enough energy, and there wasn\'t enough load to slow it down, so it started swinging out of control.'; swingTxt = 'A long cable is a strong push, and with too little load nobody is dragging their feet.'; }
+    else if (gCans()) { why = 'The grounded-wye wiring and separate cans kept the open transformer tied to ground, so it couldn\'t be fed backwards.'; swingTxt = 'Grounded wiring holds the swing still.'; }
+    else if (gPad()) { why = 'The grounded wiring weakened the push. The pad-mount\'s shared iron core still fed some voltage into the open phase, but not enough to get it swinging this time.'; swingTxt = 'Grounded wiring holds the swing with one hand. It can still move.'; }
+    else if (sim.feed === 'oh') { why = 'Overhead wire stores very little energy compared with underground cable, so there wasn\'t enough to get it swinging.'; swingTxt = 'Overhead wire is a weak push.'; }
+    else if (sim.loadPct >= 10) { why = 'The homes were using enough power to act like brakes.'; swingTxt = 'The homes drag their feet, so the swing can\'t build up.'; }
+    else { why = 'There wasn\'t enough cable to store the energy needed to get it swinging.'; swingTxt = 'A short cable is a weak push.'; }
+    take = ss.take;
+  } else {
+    if (custom) f.push(['warn', `Your setup: ${CONN_TXT[sim.conn]} bank, ${sim.lengthFt.toLocaleString()} ft of ${sim.feed === 'oh' ? 'overhead line' : 'URD cable'}, ${sim.loadPct}% load.`]);
+    f.push(['', `You ${seqWords('cutout')}.`]);
+    if (rang) { f.push(['bad', `About ${r.ferroAt} second${r.ferroAt === 1 ? '' : 's'} into the single-phase condition, ${kN} jumped into ferroresonance.`]);
+      f.push(['bad', `It hit ${r.maxOpenV.toFixed(1)}× normal voltage, about ${(r.maxOpenV*7.2).toFixed(0)} kV to ground on a 7.2 kV phase.`]); }
+    else if (restored && r.maxOpenV === 0 && !gCans()) f.push(['good', 'All three cutouts were closed before the open phases had time to settle into ferroresonance.']);
+    else f.push(['good', `The open phase settled at ${r.maxOpenV.toFixed(2)}× normal. No ferroresonance.`]);
+    if (r.arr) f.push(['bad', `The arrester on ${NAMES[r.arr.k]} conducted on every peak and failed short to ground.`]);
+    if (selfB.length) f.push(['bad', `Fuse${selfB.length > 1 ? 's' : ''} ${list(selfB)} melted from the saturation current alone.`]);
+    if (faultB.length) f.push(['bad', `Fuse${faultB.length > 1 ? 's' : ''} ${list(faultB)} blew clearing the arrester fault.`]);
+    if (restored) f.push([rang ? 'warn' : 'good', 'With all three cutouts closed, every winding was fed from the line' + (rang ? ' and the ringing stopped.' : '.')]);
+    head = bad ? 'The bank burned itself down.' : restored ? (rang ? 'Closing the last cutout ended it, this time.' : 'Restored cleanly. No ferroresonance.') : rang ? 'It rang, but nothing failed yet.' : 'The open phase stayed quiet.';
+    why = s.why;
+    if (custom) why = bad || rang
+      ? (gPad() ? 'Even with a grounded neutral, the 4/5-leg core of this pad-mount coupled flux from the energized phases into the open leg. That leg and its cable capacitance traded energy, and with too little load to soak it up, the core saturated every half cycle.' : 'The cable stored energy like a capacitor and the core of the open can stored it like a coil. With too little load to soak it up and no grounded neutral to break the loop, they traded energy until the core saturated every half cycle.')
+      : (gCans() ? 'Separate grounded-wye cans give each winding its own path and share no core, so the open phase is not back-fed into the cable.' : gPad() ? 'The grounded neutral weakens the back-feed. The shared 4/5-leg core still couples some voltage into the open phase, but here it was not enough to saturate the core.' : sim.feed === 'oh' ? 'Overhead conductor has a small fraction of URD cable capacitance, not enough to drive the core into saturation.' : sim.loadPct >= 10 ? 'The load damped it. It used up the energy before the cable and core could build it up.' : 'There was not enough cable capacitance to drive the core into saturation.');
+    take = s.take;
+  }
+  done.add(scen); document.querySelectorAll('#scenBtns button').forEach(b => b.classList.toggle('done', done.has(+b.dataset.i)));
+  const nx = SCEN[scen + 1], nxName = nx ? (simple ? SIMPLE[scen + 1].short : nx.short) : '';
+  const deg = bad ? 72 : rang ? 55 : r.maxOpenV < 0.3 ? 0 : 14;
+  $('#win').style.setProperty('--k', bad ? 'var(--bad)' : rang ? 'var(--warn)' : 'var(--good)');
+  $('#win').innerHTML = `<div class="eyebrow">What happened · ${simple ? ss.short : s.title}</div>
+    <h2 id="winTitle">${head}</h2>
+    <ul class="facts">${f.map(([c, t]) => `<li class="${c}">${t}</li>`).join('')}</ul>
+    ${simple ? `<div class="swingRow">${swingSvg(deg)}<p><b>Think of a swing</b>${swingTxt}</p></div>` : ''}
+    <p><b>Why:</b> ${why}</p>
+    <div class="take">${take}</div>
+    <div style="font-size:12px;color:var(--muted)">${OWNER}</div>
+    <div class="winBtns"><button class="btn" type="button" id="wClose">Keep watching</button><button class="btn" type="button" id="wAgain">Run again</button>${nx ? `<button class="btn primary" type="button" id="wNext">Next: ${nxName} ▶</button>` : ''}</div>`;
+  openModal();
+  $('#wClose').addEventListener('click', closeModal);
+  $('#wAgain').addEventListener('click', () => { closeModal(); loadScen(scen); });
+  if (nx) $('#wNext').addEventListener('click', () => { closeModal(); loadScen(scen + 1); });
+  ($('#wNext') || $('#wAgain')).focus();
+}
+let lastFocus = null;
+function openModal(){ modal = true; lastFocus = document.activeElement; $('#winScrim').hidden = false; }
+function closeModal(){ modal = false; $('#winScrim').hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+$('#winScrim').addEventListener('click', e => { if (e.target === $('#winScrim')) closeModal(); });
+
+/* ---------- tutorial + coach tips ---------- */
+const STEPS_TECH = [
+  { t: 'Welcome', x: 'This shows what happens inside a transformer bank when one phase is opened and the bank goes into ferroresonance. It takes about a minute to learn.' },
+  { el: '#scenArea', t: 'Pick a scenario', x: 'Each button loads a bank setup. Start with 1 and work across. The line under the buttons tells you what to do.' },
+  { el: '#cuts', t: 'Operate the cutouts', x: 'Tap A, B, or C here, or tap the cutout on the pole. The restore scenarios start with the bank dead after an outage, and you close the cutouts one at a time.' },
+  { el: '#scene', t: 'Watch the cans', x: 'Each can fills red as its fuse or arrester gets closer to failing. A can shakes when its core saturates. The number above it is its voltage to ground, where 1.00 is normal.' },
+  { el: '#sliders', t: 'Change the bank', x: 'Length is the run from the riser to the bank. URD or OH sets whether it is underground cable or overhead conductor. Load is how much the houses pull. Bank is how the primary is connected. Change them while it runs. Where ringing starts depends on transformer size and core type, so treat these lengths as an example, not a rule.' },
+  { el: '#meterCard', t: 'Read the meter', x: 'Each phase\'s voltage is drawn live. Past the red dashed line, the arrester starts conducting. Tap "Inside the can" to see the electrons and the iron core.' },
+  { t: 'Then a window explains it', x: 'When the situation plays out, a window pops up with what happened, why, and a button to the next scenario. Prevent it at the top covers field practice and arc-flash safety. Press Tutorial any time to see this again.' }
+];
+const STEPS_SIMPLE = [
+  { t: 'Welcome', x: 'This shows what can happen when one switch on a group of three transformers is opened. Sometimes nothing happens. Sometimes the voltage swings out of control and burns parts up. This takes about a minute.' },
+  { t: 'The big idea: a swing', x: 'The underground cable stores energy like a battery. A transformer\'s iron core stores energy like a spring. If one switch is opened, they can start passing energy back and forth, like a swing being pushed higher and higher. If nothing slows it down, the voltage keeps climbing, to about 2× normal, sometimes more.' },
+  { el: '#scenArea', t: 'Try each situation', x: 'Each button sets up a different situation. Start with 1 and work across. The line underneath tells you what to do.' },
+  { el: '#cuts', t: 'Open or close a switch', x: 'These are the switches (called cutouts) for the three wires: A, B, and C. Tap one here or on the pole to open or close it. Some situations start with the power out, and you close them one at a time.' },
+  { el: '#scene', t: 'Watch the transformers', x: 'The number over each transformer is its voltage. 1.0× is normal. A transformer fills with red as its parts get closer to burning up, and it shakes when its iron is overloaded.' },
+  { el: '#sliders', t: 'Change the setup', x: 'Length is how far the wire runs from the switches to the transformers. URD means underground cable, OH means overhead wire on poles. Homes is how much power they use. Wiring is how the transformers are hooked up. You can change these while it runs. How much cable is too much depends on the transformer\'s size and type, so these numbers are examples, not rules.' },
+  { el: '#meterCard', t: 'Read the meter', x: 'Each colored line is one wire\'s voltage. Normal stays in the green band. If a line crosses the red dashed line, the arrester has to dump the extra. Tap "Inside" to look inside the transformer.' },
+  { t: 'Tips will pop up', x: 'While it runs, short tips pause the action and point at what to look at. When it\'s over, a window explains what happened. The ⚠ Prevent it button shows how crews stop this in the field. Press Tutorial at the top to see this again.' }
+];
+const steps = () => simple ? STEPS_SIMPLE : STEPS_TECH;
+let tutOn = false, tutI = 0, tutKind = 'tour', coachData = null;
+function startTut(){ tutKind = 'tour'; tutOn = true; tutI = 0; $('#tut').hidden = false; showStep(); }
+function coach(sel, t, x){ tutKind = 'coach'; coachData = { el: sel, t, x }; tutOn = true; $('#tut').hidden = false; showStep(); }
+function endTut(){ const was = tutKind; tutOn = false; $('#tut').hidden = true; if (run) run.quietSince = null;
+  if (was === 'tour') { try { localStorage.setItem('ferroTutDone', '1'); } catch (e) {} } }
+function place(st){
+  const hole = $('#hole'), tip = $('#tip'), vw = innerWidth, vh = innerHeight, tw = Math.min(340, vw - 24);
+  $('#tipTitle').textContent = st.t; $('#tipText').textContent = st.x;
+  if (st.el && $(st.el)) {
+    const r = $(st.el).getBoundingClientRect(), pad = r.width < 40 ? 14 : 6;
+    hole.classList.remove('none');
+    Object.assign(hole.style, { left: (r.left - pad) + 'px', top: (r.top - pad) + 'px', width: (r.width + pad*2) + 'px', height: (r.height + pad*2) + 'px' });
+    const th = tip.offsetHeight || 180;
+    let top = r.bottom + pad + 10; if (top + th > vh - 8) top = r.top - pad - th - 10; if (top < 8) top = Math.max(8, vh - th - 8);
+    const left = Math.min(Math.max(12, r.left + r.width/2 - tw/2), vw - tw - 12);
+    Object.assign(tip.style, { left: left + 'px', top: top + 'px' });
+  } else {
+    hole.classList.add('none'); Object.assign(hole.style, { left: '50%', top: '40%', width: '0px', height: '0px' });
+    Object.assign(tip.style, { left: (vw - tw)/2 + 'px', top: Math.max(12, vh*0.28) + 'px' });
+  }
+}
+function showStep(){
+  if (tutKind === 'coach') {
+    $('#tipN').textContent = 'Tip'; $('#tipBack').hidden = true; $('#tipSkip').textContent = 'No more tips'; $('#tipNext').textContent = 'Continue';
+    place(coachData);
+    // let the tip measure itself, then place again
+    requestAnimationFrame(() => tutOn && tutKind === 'coach' && place(coachData));
+  } else {
+    const S = steps();
+    $('#tipN').textContent = `Step ${tutI + 1} of ${S.length}`; $('#tipBack').hidden = false; $('#tipBack').disabled = tutI === 0;
+    $('#tipSkip').textContent = 'Skip'; $('#tipNext').textContent = tutI === S.length - 1 ? 'Start' : 'Next';
+    place(S[tutI]); requestAnimationFrame(() => tutOn && tutKind === 'tour' && place(S[tutI]));
+  }
+  $('#tipNext').focus();
+}
+$('#tipNext').addEventListener('click', () => { if (tutKind === 'coach') return endTut(); if (tutI < steps().length - 1) { tutI++; showStep(); } else { endTut(); $('#btnTut').focus(); } });
+$('#tipBack').addEventListener('click', () => { if (tutI > 0) { tutI--; showStep(); } });
+$('#tipSkip').addEventListener('click', () => { if (tutKind === 'coach') tipsOn = false; endTut(); });
+$('#btnTut').addEventListener('click', startTut);
+/* ---------- prevention + safety panel ---------- */
+const PREV_TECH = {
+  h: 'How crews prevent it',
+  li: ['Use gang-operated (three-phase) switching so the bank is never single-phased.',
+    'If cutouts must be closed one at a time, close all three quickly. Use multiple hot sticks so the gap between phases is seconds, not minutes. The time lag between phases is the biggest factor.',
+    'Pull the elbows or bayonet fuses so the transformer is off the cable while the primary is switched. Energize the cable first, then the transformer.',
+    'Energize with load connected, or with the secondary already live where your procedures allow, so there is resistance to damp it.',
+    'Switch as close to the bank as you can to keep cable capacitance out of the circuit.'],
+  ov: 'Ferroresonant overvoltage is typically about 2× normal, sometimes more. Arresters conduct on every peak and can fail within seconds, and the fault takes the fuses with it.',
+  len: 'There is no single safe cable length. It depends on transformer kVA and core type. Low-loss cores and grounded-wye pad-mounts with 4- or 5-leg cores can ring on runs a fraction of the older rule-of-thumb lengths.',
+  arc: 'Arc flash: on 25 kV and 35 kV class systems, a ferroresonating bank can fail violently at the arrester, elbow, or tank. Treat a single-phased bank as energized and unstable, wear arc-rated PPE for the full incident energy, keep your distance, and follow your company\'s switching procedures.',
+  src: 'Sources: R. A. Walling, IEEE PES Ferroresonance Working Group panel paper (low-loss transformers); Lindholm utility ferroresonance case study; Incident Prevention, "Understanding and Preventing Ferroresonance"; IEEE, "Ferroresonance During Single-Phase Switching of 3-Phase Distribution Transformer Banks." Training aid only. Your utility\'s procedures come first.'
+};
+const PREV_SIMPLE = {
+  h: 'How line crews stop it',
+  li: ['Close all three switches at the same time with a three-phase switch, so there is no in-between moment.',
+    'If the switches have to be closed one at a time, close them fast. Use more than one hot stick so there is very little delay between them.',
+    'Unplug the transformer (pull the elbows or bayonet fuses) while switching. Turn the cable on first, then plug the transformer back in.',
+    'Turn power on with homes or load connected, so something is there to slow the swing.',
+    'Switch as close to the transformers as you can, so less cable is involved.'],
+  ov: 'How bad it gets: about 2× normal voltage, sometimes more. That is enough to burn up arresters and blow fuses.',
+  len: 'How much cable is too much? There is no single number. It depends on the transformer\'s size and type. Newer, more efficient transformers can swing on shorter runs.',
+  arc: 'Arc flash danger: on higher-voltage systems (25 kV and up), a transformer swinging out of control can fail violently. Treat it as live and unstable, wear arc-rated gear, keep your distance, and follow your company\'s procedures.',
+  src: 'Based on IEEE and utility guidance on ferroresonance. Training aid only. Your company\'s procedures come first.'
+};
+function showPrevent(){
+  const P = simple ? PREV_SIMPLE : PREV_TECH;
+  $('#win').style.setProperty('--k', 'var(--warn)');
+  $('#win').innerHTML = `<div class="eyebrow">${simple ? 'In the field' : 'Field practice'}</div>
+    <h2 id="winTitle">${P.h}</h2>
+    <ul class="facts">${P.li.map(t => `<li class="good">${t}</li>`).join('')}</ul>
+    <p>${P.ov}</p>
+    <p>${P.len}</p>
+    <div class="warnBox"><b>⚠ </b>${P.arc}</div>
+    <div style="font-size:12px;color:var(--muted)">${P.src}<br>${OWNER}</div>
+    <div class="winBtns"><button class="btn primary" type="button" id="wClose">Got it</button></div>`;
+  openModal();
+  $('#wClose').addEventListener('click', closeModal);
+  $('#wClose').focus();
+}
+$('#btnSafe').addEventListener('click', () => { if (tutOn) endTut(); showPrevent(); });
+
+addEventListener('resize', () => { if (tutOn) showStep(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (tutOn) endTut(); else if (modal) closeModal(); } });
+
+/* ---------- simple / technical ---------- */
+function applyMode(){
+  document.body.classList.toggle('simple', simple);
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-pressed', (b.dataset.m === 'simple') === simple));
+  $('#lenL').textContent = 'Length'; $('#loadL').textContent = simple ? 'Homes' : 'Load'; $('#connL').textContent = simple ? 'Wiring' : 'Bank';
+  $('#insideBtn').textContent = simple ? 'Inside' : 'Inside the can';
+  buildScen(); document.querySelectorAll('#scenBtns button').forEach(b => { b.setAttribute('aria-pressed', +b.dataset.i === scen); b.classList.toggle('done', done.has(+b.dataset.i)); });
+  $('#task').innerHTML = simple ? SIMPLE[scen].task : `<b>${SCEN[scen].title}.</b> ${SCEN[scen].task}`;
+  if (sim) drawCoil();
+  try { localStorage.setItem('ferroMode', simple ? 'simple' : 'tech'); } catch (e) {}
+}
+document.querySelectorAll('#mode button').forEach(b => b.addEventListener('click', () => { simple = b.dataset.m === 'simple'; applyMode(); }));
+
+/* ---------- loop ---------- */
+let last = performance.now(), prevCuts = '';
+function frame(now){
+  const dt = Math.min(0.05, (now - last)/1000); last = now;
+  if (running && !modal && !tutOn) {
+    const rad = speed*2*Math.PI*dt, n = Math.max(1, Math.round(rad/0.004)), d = rad/n;
+    for (let j = 0; j < n; j++) {
+      pending.forEach((pd, k) => { if (pd && Math.abs(Math.sin(sim.t + PH[k])) > 0.97) { if (!run.openWall) run.openWall = performance.now(); pending[k] = false; sim.ph[k].cut = 'open'; openAt[k] = sim.t; } });
+      stepSim(sim, d); acc += d; if (acc >= SAMP) { acc -= SAMP; buf.push(sim.ph.map(p => p.vg || 0)); if (buf.length > BUF) buf.shift(); } }
+    sim.ph.forEach((p, k) => { dotOff[k] -= (p.i || 0)*30*dt*(speed/0.35); const dd = $('#dot'+k); dd.style.strokeDashoffset = dotOff[k].toFixed(1); dd.style.opacity = Math.min(1, .15 + Math.abs(p.i || 0)).toFixed(2); });
+    const c = sim.ph.map(p => p.cut).join() + pending.join(); if (c !== prevCuts) { prevCuts = c; syncCuts(); }
+  }
+  status(); view === 'scope' ? drawScope() : drawInside(now, dt);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- wiring ---------- */
+function setSpeed(v){ speed = v; document.querySelectorAll('#speed button').forEach(x => x.setAttribute('aria-pressed', +x.dataset.s === v)); }
+function setView(v){ view = v; document.querySelectorAll('[data-view]').forEach(x => x.setAttribute('aria-pressed', x.dataset.view === v)); }
+$('#btnRun').addEventListener('click', () => { running = !running; $('#btnRun').textContent = running ? '❚❚' : '▶'; $('#btnRun').setAttribute('aria-label', running ? 'Pause' : 'Run'); });
+$('#btnReset').addEventListener('click', () => { newSim(); syncCuts(); });
+document.querySelectorAll('#speed button').forEach(x => x.addEventListener('click', () => setSpeed(+x.dataset.s)));
+document.querySelectorAll('[data-view]').forEach(x => x.addEventListener('click', () => setView(x.dataset.view)));
+$('#len').addEventListener('input', e => setLen(e.target.value));
+$('#load').addEventListener('input', e => setLoad(e.target.value));
+document.querySelectorAll('#conn button').forEach(x => x.addEventListener('click', () => setConn(x.dataset.v)));
+document.querySelectorAll('#feed button').forEach(x => x.addEventListener('click', () => setFeed(x.dataset.v)));
+
+readTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+buildScene(); buildCuts(); buildScen(); setSpeed(0.35); loadScen(SCEN.length - 1); applyMode();
+requestAnimationFrame(() => { const b = document.querySelector('#scenBtns button[aria-pressed="true"]'); if (b) b.parentElement.scrollLeft = b.offsetLeft; });
+if (!running) { $('#btnRun').textContent = '▶'; $('#btnRun').setAttribute('aria-label', 'Run'); }
+let seen = false; try { seen = localStorage.getItem('ferroTutDone') === '1'; } catch (e) {}
+if (!seen) requestAnimationFrame(() => startTut());
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>

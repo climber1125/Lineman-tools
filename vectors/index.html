@@ -1,0 +1,477 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Transformer Vector Basics</title>
+<!-- Transformer Vector Basics. © 2026 Caleb Lenz. All rights reserved. Not for redistribution. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: field-manual board. A spinning-arrow strip on top, then bank picker + two vector diagrams + a meter. Game tab reuses the same diagrams. */
+:root{
+  --bg:#e9edf1; --panel:#ffffff; --ink:#18212b; --muted:#5a6775; --line:#cdd5de;
+  --phA:#18212b; --phB:#c62828; --phC:#1d5bbf; --meter:#c77700; --good:#1f7a3a; --bad:#b3261e;
+  --chip:#f2f5f8;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10151b; --panel:#18202a; --ink:#e7edf3; --muted:#9aa8b6; --line:#2c3743;
+  --phA:#e7edf3; --phB:#ff6b6b; --phC:#6aa6ff; --meter:#ffb627; --good:#5bd17f; --bad:#ff7a70; --chip:#212b36; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151b; --panel:#18202a; --ink:#e7edf3; --muted:#9aa8b6; --line:#2c3743;
+  --phA:#e7edf3; --phB:#ff6b6b; --phC:#6aa6ff; --meter:#ffb627; --good:#5bd17f; --bad:#ff7a70; --chip:#212b36; color-scheme:dark}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:16px;padding-block:14px 32px}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,5vw,42px);line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;font-size:15px}
+.tabs{display:flex;background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.tabs button{font:600 15px var(--body);border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.step{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--muted);margin:0 0 4px}
+h2{font-family:var(--display);font-weight:700;font-size:24px;margin:0 0 6px;line-height:1.1;text-wrap:balance}
+p{margin:0;max-width:68ch}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.row>*{min-width:0}
+canvas{display:block;width:100%;height:190px}
+.btn{font:600 15px var(--body);background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+button:focus-visible{outline:3px solid var(--meter);outline-offset:2px}
+.banks{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+.diagrams{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:12px}
+.dia{border:1px solid var(--line);border-radius:10px;padding:10px 12px 12px;background:var(--bg)}
+.dia h3{font-family:var(--display);font-weight:700;font-size:18px;margin:0;text-transform:uppercase;letter-spacing:.05em}
+.plate{font-family:var(--mono);font-size:14px;color:var(--muted)}
+.dia svg{width:100%;max-width:300px;display:block;margin:4px auto 0;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted);margin-top:8px}
+.sw{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.say{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.say li{max-width:70ch}
+.meterbox{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+.term{font:700 16px var(--mono);width:44px;height:40px;border-radius:8px;border:2px solid var(--line);background:var(--chip);color:var(--ink);cursor:pointer}
+.term[aria-pressed="true"]{border-color:var(--meter);background:var(--meter);color:#111}
+.term:disabled{opacity:.3;cursor:not-allowed}
+.readout{font:600 28px var(--mono);font-variant-numeric:tabular-nums;color:var(--meter);min-width:6ch}
+.big{font-family:var(--display);font-weight:700;font-size:22px}
+.shiftTag{display:inline-block;font:700 13px var(--mono);padding:3px 8px;border-radius:999px;border:1.5px solid currentColor;margin-left:6px;vertical-align:middle}
+/* game */
+.hud{display:flex;flex-wrap:wrap;gap:18px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;color:var(--muted)}
+.hud b{color:var(--ink);font-size:20px}
+.q{font-family:var(--display);font-weight:700;font-size:clamp(22px,3.6vw,30px);line-height:1.15;margin:10px 0 6px;text-wrap:balance}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.choice{font:700 20px var(--mono);padding:14px 10px;border-radius:10px;border:2px solid var(--line);background:var(--chip);color:var(--ink);cursor:pointer}
+.choice.wide{font:700 18px var(--body)}
+.choice:hover:not(:disabled){border-color:var(--ink)}
+.choice.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,var(--chip))}
+.choice.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 18%,var(--chip))}
+.choice:disabled{cursor:default}
+.fb{margin-top:14px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg)}
+.fb .big.ok{color:var(--good)} .fb .big.no{color:var(--bad)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg)}
+.kbd{font:600 12px var(--mono);border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--chip)}
+.hint{font-size:14px;color:var(--muted)}
+footer{font-size:13px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Transformer Vector Basics</h1>
+      <p class="sub">An arrow for every phase. Read the arrows, call the meter.</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button id="tabLearn" role="tab" aria-selected="true">Learn</button>
+      <button id="tabGame" role="tab" aria-selected="false">Game</button>
+    </div>
+  </header>
+
+  <!-- LEARN -->
+  <section id="learn" class="wrap" style="gap:16px">
+    <div class="panel">
+      <p class="step">Step 1</p>
+      <h2>An arrow is just a sine wave going around</h2>
+      <p>Each phase is an arrow spinning 60 times a second. The height of the arrow tip is the voltage right now. Trace that height over time and you get the sine wave. Three phases means three arrows, always 120° apart.</p>
+      <canvas id="spin" aria-label="Three rotating phase arrows drawing their sine waves"></canvas>
+      <div class="row" style="align-items:center;gap:10px;margin-top:6px">
+        <button class="btn" id="spinBtn" aria-pressed="false">Pause</button>
+        <span class="hint">Slowed way down. Real 60 Hz is too fast to see.</span>
+      </div>
+      <p style="margin-top:10px"><b>The trick:</b> freeze the arrows and you get a vector diagram. The diagram is a snapshot that shows how big each voltage is (arrow length) and how far apart in time they are (the angle).</p>
+    </div>
+
+    <div class="panel">
+      <p class="step">Step 2</p>
+      <h2>Pick a bank, read its arrows</h2>
+      <div class="banks" id="bankBtns"></div>
+      <div class="diagrams">
+        <div class="dia">
+          <h3>Primary (high side)</h3>
+          <div class="plate" id="priPlate"></div>
+          <svg id="priSvg" viewBox="0 0 260 250" role="img" aria-label="Primary vector diagram"></svg>
+        </div>
+        <div class="dia">
+          <h3>Secondary (low side) <span id="shiftTag"></span></h3>
+          <div class="plate" id="secPlate"></div>
+          <svg id="secSvg" viewBox="0 0 260 250" role="img" aria-label="Secondary vector diagram"></svg>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--phA)"></i>Phase A</span>
+        <span><i class="sw" style="background:var(--phB)"></i>Phase B</span>
+        <span><i class="sw" style="background:var(--phC)"></i>Phase C</span>
+        <span><i class="sw" style="background:var(--meter)"></i>Meter leads</span>
+        <span><i class="sw" style="background:var(--muted);opacity:.5"></i>Where primary A points</span>
+      </div>
+      <ul class="say" id="bankSay"></ul>
+    </div>
+
+    <div class="panel">
+      <p class="step">Step 3</p>
+      <h2>Put the meter on it</h2>
+      <p>A voltmeter reads the <b>distance between two points</b> on the secondary diagram. Pick two terminals.</p>
+      <div class="meterbox">
+        <span class="hint">Lead 1 + Lead 2:</span>
+        <span id="termBtns" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+        <span class="readout" id="readout">—</span>
+      </div>
+      <p class="hint" id="meterNote" style="margin-top:6px"></p>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="panel" hidden>
+    <div class="hud">
+      <span>Score <b id="score">0</b></span>
+      <span>Streak <b id="streak">0</b></span>
+      <span>Best streak <b id="best">0</b></span>
+      <span>Round <b id="round">1</b></span>
+    </div>
+    <div id="qArea"></div>
+    <div class="row" style="margin-top:14px;align-items:center;gap:10px">
+      <button class="btn" id="nextBtn" hidden>Next question</button>
+      <span class="hint">Keys: <span class="kbd">1</span>–<span class="kbd">4</span> answer, <span class="kbd">N</span> next</span>
+    </div>
+  </section>
+
+  <footer>Training aid only. Follow your utility's procedures and test before you touch. © 2026 Caleb Lenz.</footer>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const SQ3=Math.sqrt(3), D2R=Math.PI/180;
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const PH={A:'--phA',B:'--phB',C:'--phC'};
+
+/* ---------- Bank data ---------- */
+const BANKS=[
+ {id:'yy',name:'Wye – Wye',pri:{type:'wye',label:'12,470Y/7,200 V'},sec:{type:'wye',v:120,label:'208Y/120 V'},shift:0,
+  say:['Primary and secondary arrows point the same way. No shift.',
+       'Phase-to-neutral = one arrow length = 120 V.',
+       'Phase-to-phase = distance between two tips = 208 V. Tips are 120° apart, so the gap is 1.73 × 120.',
+       'Common pad-mount for commercial buildings: 120 V outlets and lights, 208 V equipment.']},
+ {id:'dy',name:'Delta – Wye',pri:{type:'delta',label:'12,470 V delta'},sec:{type:'wye',v:277,label:'480Y/277 V'},shift:30,
+  say:['The secondary arrows are turned 30° behind the primary. Look at the gray dashed arrow: that is where primary A points.',
+       'Why: each low-side winding sits across two primary phases, and the voltage between two phases points 30° off from either one.',
+       'Phase-to-neutral = 277 V. Phase-to-phase = 480 V.',
+       'Bigger commercial and industrial: 277 V lights, 480 V motors.']},
+ {id:'dd',name:'Delta – Delta',pri:{type:'delta',label:'12,470 V delta'},sec:{type:'delta',v:240,label:'240 V delta'},shift:0,
+  say:['Triangle in, triangle out. No shift.',
+       'There is no neutral. Every meter reading is corner to corner: 240 V.',
+       'Used for three-phase motor load where nothing needs 120 V.']},
+ {id:'yd',name:'Wye – Delta',pri:{type:'wye',label:'12,470Y/7,200 V'},sec:{type:'delta',v:240,label:'240 V delta'},shift:30,
+  say:['Wye on one side, delta on the other means a 30° turn, just like delta – wye.',
+       'On distribution banks the primary wye point is usually left floating, not tied to the system neutral.',
+       'Corner to corner: 240 V. No neutral on the secondary.']},
+ {id:'hl',name:'High-Leg Delta',pri:{type:'delta',label:'12,470 V delta'},sec:{type:'hl',v:240,label:'240/120 V 4-wire delta'},shift:0,
+  say:['One side of the triangle (A to C) is center-tapped to make a neutral.',
+       'A–N and C–N are half that side: 120 V. Safe for lights and outlets.',
+       'B–N reaches from the far corner to the middle of the opposite side: 208 V. That is the high leg (wild leg), marked orange.',
+       'Never land a 120 V load on the high leg.']}
+];
+const byId=id=>BANKS.find(b=>b.id===id);
+
+/* ---------- Geometry (in volts, y up) ---------- */
+function points(side,rot){
+  // side = {type, v}; rot = degrees the low side lags (clockwise turn)
+  const ang={A:90-rot,B:-30-rot,C:210-rot};
+  const R= side.type==='wye' ? side.v : side.v/SQ3;
+  const p={};
+  for(const k of ['A','B','C']) p[k]={x:R*Math.cos(ang[k]*D2R),y:R*Math.sin(ang[k]*D2R)};
+  if(side.type==='wye') p.N={x:0,y:0};
+  if(side.type==='hl') p.N={x:(p.A.x+p.C.x)/2,y:(p.A.y+p.C.y)/2};
+  return {p,R};
+}
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const volts=(side,rot,t1,t2)=>{const {p}=points(side,rot);return Math.round(dist(p[t1],p[t2]));};
+const terms=side=>side.type==='delta'?['A','B','C']:['A','B','C','N'];
+
+/* ---------- SVG drawing ---------- */
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.appendChild(e);return e;}
+function arrowHead(svg,x1,y1,x2,y2,color){
+  const a=Math.atan2(y2-y1,x2-x1),L=11,W=6;
+  const bx=x2-L*Math.cos(a),by=y2-L*Math.sin(a);
+  el('polygon',{points:`${x2},${y2} ${bx+W*Math.sin(a)},${by-W*Math.cos(a)} ${bx-W*Math.sin(a)},${by+W*Math.cos(a)}`,fill:color},svg);
+}
+/* opts: side, rot, meter:[t1,t2]|null, meterLabel:bool, ghost:bool, hidden:bool */
+function draw(svg,o){
+  svg.innerHTML='';
+  const cx=130,cy=128,S=88;
+  const ink=css('--ink'),muted=css('--muted'),line=css('--line'),meter=css('--meter');
+  if(o.hidden){
+    el('circle',{cx,cy,r:S,fill:'none',stroke:line,'stroke-width':2,'stroke-dasharray':'6 6'},svg);
+    const t=el('text',{x:cx,y:cy+12,'text-anchor':'middle','font-family':'Barlow Condensed, Arial Narrow, sans-serif','font-size':44,'font-weight':700,fill:muted},svg);t.textContent='?';
+    return;
+  }
+  const {p,R}=points(o.side,o.rot||0);
+  const k=S/R, X=q=>cx+q.x*k, Y=q=>cy-q.y*k;
+  // guide circle
+  el('circle',{cx,cy,r:S,fill:'none',stroke:line,'stroke-width':1},svg);
+  // ghost (primary A direction)
+  if(o.ghost){
+    el('line',{x1:cx,y1:cy,x2:cx,y2:cy-S-8,stroke:muted,'stroke-width':2,'stroke-dasharray':'5 5',opacity:.7},svg);
+    if(o.rot){
+      const r=46,a1=90*D2R,a2=(90-o.rot)*D2R;
+      el('path',{d:`M ${cx+r*Math.cos(a1)} ${cy-r*Math.sin(a1)} A ${r} ${r} 0 0 1 ${cx+r*Math.cos(a2)} ${cy-r*Math.sin(a2)}`,fill:'none',stroke:muted,'stroke-width':1.5},svg);
+      const t=el('text',{x:cx+16,y:cy-50,'font-family':'IBM Plex Mono, monospace','font-size':12,'font-weight':600,fill:muted},svg);t.textContent=o.rot+'°';
+    }
+  }
+  if(o.side.type==='wye'){
+    // phase-to-phase hint triangle
+    el('polygon',{points:['A','B','C'].map(t=>`${X(p[t])},${Y(p[t])}`).join(' '),fill:'none',stroke:line,'stroke-width':1.5,'stroke-dasharray':'4 5'},svg);
+    for(const t of ['A','B','C']){
+      const c=css(PH[t]);
+      el('line',{x1:cx,y1:cy,x2:X(p[t]),y2:Y(p[t]),stroke:c,'stroke-width':4,'stroke-linecap':'round'},svg);
+      arrowHead(svg,cx,cy,X(p[t]),Y(p[t]),c);
+    }
+  } else {
+    // delta: windings as triangle sides
+    const sides=[['A','B'],['B','C'],['C','A']];
+    for(const [a,b] of sides) el('line',{x1:X(p[a]),y1:Y(p[a]),x2:X(p[b]),y2:Y(p[b]),stroke:ink,'stroke-width':3.5,'stroke-linecap':'round',opacity:.85},svg);
+    for(const t of ['A','B','C']) el('circle',{cx:X(p[t]),cy:Y(p[t]),r:7,fill:css(PH[t])},svg);
+  }
+  if(p.N){ el('circle',{cx:X(p.N),cy:Y(p.N),r:5.5,fill:css('--panel'),stroke:ink,'stroke-width':2.5},svg); }
+  // meter
+  if(o.meter){
+    const [a,b]=o.meter;
+    el('line',{x1:X(p[a]),y1:Y(p[a]),x2:X(p[b]),y2:Y(p[b]),stroke:meter,'stroke-width':5,'stroke-linecap':'round',opacity:.9},svg);
+    for(const t of [a,b]) el('circle',{cx:X(p[t]),cy:Y(p[t]),r:8,fill:'none',stroke:meter,'stroke-width':3},svg);
+    if(o.meterLabel){
+      const mx=(X(p[a])+X(p[b]))/2,my=(Y(p[a])+Y(p[b]))/2;
+      const txt=volts(o.side,o.rot||0,a,b)+' V';
+      const bg=el('rect',{x:mx-30,y:my-13,width:60,height:24,rx:6,fill:css('--panel'),stroke:meter,'stroke-width':2},svg);
+      const t=el('text',{x:mx,y:my+5,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':14,'font-weight':600,fill:ink},svg);t.textContent=txt;
+    }
+  }
+  // labels
+  for(const t of Object.keys(p)){
+    let lx=X(p[t]),ly=Y(p[t]);
+    if(t==='N'){ if(o.side.type==='hl'){lx-=16;ly+=4;} else {lx+=14;ly+=18;} }
+    else { const dx=lx-cx,dy=ly-cy,m=Math.hypot(dx,dy)||1; lx+=dx/m*18; ly+=dy/m*18+5; }
+    const tx=el('text',{x:lx,y:ly,'text-anchor':'middle','font-family':'Barlow Condensed, Arial Narrow, sans-serif','font-size':20,'font-weight':700,fill:t==='N'?ink:css(PH[t])},svg);
+    tx.textContent=t;
+  }
+}
+
+/* ---------- Learn: spinning phasors ---------- */
+const cv=$('#spin'),ctx=cv.getContext('2d');
+let running=!window.matchMedia('(prefers-reduced-motion: reduce)').matches, theta=0.6, last=0;
+function sizeCanvas(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);}
+function frame(ts){
+  if(running&&last) theta+=(ts-last)/1000*1.2;
+  last=ts;
+  const W=cv.clientWidth,H=cv.clientHeight,r=Math.min(72,H/2-14),cx=r+16,cy=H/2;
+  ctx.clearRect(0,0,W,H);
+  const line=css('--line'),muted=css('--muted');
+  ctx.strokeStyle=line;ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.stroke();
+  const x0=cx+r+24;
+  ctx.beginPath();ctx.moveTo(x0,cy);ctx.lineTo(W-8,cy);ctx.stroke();
+  ctx.fillStyle=muted;ctx.font='12px "IBM Plex Mono", monospace';ctx.fillText('0 V',x0+4,cy-6);ctx.fillText('time →',W-62,H-6);
+  const ph=[['A',0],['B',-120],['C',120]];
+  const k=0.045;
+  for(const [n,deg] of ph){
+    const c=css(PH[n]),a=theta+deg*D2R;
+    // wave
+    ctx.strokeStyle=c;ctx.lineWidth=2.2;ctx.globalAlpha=.85;ctx.beginPath();
+    for(let x=x0;x<W-8;x+=2){const y=cy-r*Math.sin(a-(x-x0)*k);x===x0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();ctx.globalAlpha=1;
+    // arrow
+    const tx=cx+r*Math.cos(a),ty=cy-r*Math.sin(a);
+    ctx.lineWidth=3.5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(tx,ty);ctx.stroke();
+    ctx.fillStyle=c;ctx.beginPath();ctx.arc(tx,ty,4.5,0,7);ctx.fill();
+    // height link
+    ctx.setLineDash([3,4]);ctx.lineWidth=1;ctx.globalAlpha=.6;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(x0,ty);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    ctx.beginPath();ctx.arc(x0,ty,4,0,7);ctx.fill();
+    ctx.font='700 15px "Barlow Condensed", sans-serif';ctx.fillText(n,cx+(r+12)*Math.cos(a)-4,cy-(r+12)*Math.sin(a)+5);
+  }
+  requestAnimationFrame(frame);
+}
+const spinBtn=$('#spinBtn');
+function setSpin(on){running=on;spinBtn.textContent=on?'Pause':'Play';spinBtn.setAttribute('aria-pressed',on?'false':'true');}
+spinBtn.onclick=()=>setSpin(!running);
+setSpin(running);
+
+/* ---------- Learn: bank explorer ---------- */
+let cur='yy', meterSel=['A','B'];
+const bankBtns=$('#bankBtns');
+BANKS.forEach(b=>{const x=document.createElement('button');x.className='btn';x.id='bank-'+b.id;x.textContent=b.name;x.onclick=()=>{cur=b.id;const t=terms(b.sec);meterSel=meterSel.filter(v=>t.includes(v));if(meterSel.length<2)meterSel=['A','B'];renderLearn();};bankBtns.appendChild(x);});
+function renderLearn(){
+  const b=byId(cur);
+  BANKS.forEach(x=>$('#bank-'+x.id).setAttribute('aria-pressed',x.id===cur));
+  $('#priPlate').textContent=b.pri.label;
+  $('#secPlate').textContent=b.sec.label;
+  $('#shiftTag').innerHTML=`<span class="shiftTag" style="color:${b.shift?'var(--phB)':'var(--good)'}">${b.shift?'turned 30°':'no shift'}</span>`;
+  const priSide=b.pri.type==='wye'?{type:'wye',v:7200}:{type:'delta',v:12470};
+  draw($('#priSvg'),{side:priSide,rot:0});
+  draw($('#secSvg'),{side:b.sec,rot:b.shift,ghost:true,meter:meterSel.length===2?meterSel:null,meterLabel:true});
+  $('#bankSay').innerHTML=b.say.map(s=>`<li>${s}</li>`).join('');
+  // meter terminals
+  const tb=$('#termBtns');tb.innerHTML='';
+  for(const t of ['A','B','C','N']){
+    const x=document.createElement('button');x.className='term';x.id='term-'+t;x.textContent=t;
+    x.disabled=!terms(b.sec).includes(t);
+    x.setAttribute('aria-pressed',meterSel.includes(t));
+    x.onclick=()=>{ if(meterSel.includes(t)) meterSel=meterSel.filter(v=>v!==t); else {meterSel.push(t); if(meterSel.length>2) meterSel.shift();} renderLearn(); };
+    tb.appendChild(x);
+  }
+  const ro=$('#readout'),note=$('#meterNote');
+  if(meterSel.length===2){
+    const v=volts(b.sec,b.shift,meterSel[0],meterSel[1]);
+    ro.textContent=v+' V';
+    const hasN=meterSel.includes('N');
+    if(b.sec.type==='hl'&&hasN&&meterSel.includes('B')) note.textContent='High leg. B to the center tap is 208 V, not 120 V.';
+    else if(hasN) note.textContent='Phase to neutral: one arrow length (or half a side on a center tap).';
+    else if(b.sec.type==='wye') note.textContent='Phase to phase: the gap between two arrow tips, 1.73 × the arrow length.';
+    else note.textContent='Corner to corner on a delta: one full side of the triangle.';
+  } else { ro.textContent='—'; note.textContent='Pick two terminals.'; }
+  if(b.sec.type==='delta' && !note.textContent.includes('Pick')) note.textContent+=' This delta has no neutral, so N is grayed out.';
+}
+
+/* ---------- Game ---------- */
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+let score=0,streak=0,best=store.get('tvb-best',0),round=1,Q=null,answered=false;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const TIE=[
+ {name:'Wye – Wye',sec:{type:'wye',v:120,label:'208Y/120 V'},shift:0},
+ {name:'Delta – Wye',sec:{type:'wye',v:120,label:'208Y/120 V'},shift:30},
+ {name:'Delta – Delta',sec:{type:'delta',v:240,label:'240 V delta'},shift:0},
+ {name:'Wye – Delta',sec:{type:'delta',v:240,label:'240 V delta'},shift:30}
+];
+function makeQ(){
+  const type=pick(['meter','meter','meter','shift','tie']);
+  if(type==='meter'){
+    const b=pick(BANKS);
+    let pair; const ts=terms(b.sec);
+    if(b.sec.type==='hl'&&Math.random()<.45) pair=shuffle(['B','N']);
+    else { do{pair=[pick(ts),pick(ts)];}while(pair[0]===pair[1]); }
+    const ans=volts(b.sec,b.shift,pair[0],pair[1]);
+    const pool=[120,208,240,277,480].filter(v=>v!==ans);
+    const opts=shuffle([ans,...shuffle(pool).slice(0,3)]);
+    return {type,b,pair,ans,opts,labels:opts.map(v=>v+' V')};
+  }
+  if(type==='shift'){
+    const b=pick(BANKS);
+    return {type,b,ans:b.shift,opts:[0,30],labels:['Lined up (0°)','Turned 30°']};
+  }
+  let a,c; a=pick(TIE); const mates=TIE.filter(t=>t.sec.label===a.sec.label); c=pick(mates);
+  if(Math.random()<.5){ c=mates.find(t=>t!==a)||c; }
+  const ok=a.shift===c.shift;
+  return {type:'tie',a,c,ans:ok,opts:[true,false],labels:['Yes, tie them','No, keep them apart']};
+}
+function renderQ(){
+  answered=false;$('#nextBtn').hidden=true;
+  const q=Q,area=$('#qArea');
+  let h='';
+  if(q.type==='meter'){
+    h=`<p class="step" style="margin-top:12px">Call the meter</p>
+       <p class="q">${q.b.name} bank, ${q.b.sec.label}. Meter on ${q.pair[0]} and ${q.pair[1]}. What does it read?</p>
+       <div class="dia" style="max-width:340px"><div class="plate">${q.b.sec.label} secondary</div><svg id="gSvg" viewBox="0 0 260 250" role="img" aria-label="Secondary vector diagram with meter leads"></svg></div>`;
+  } else if(q.type==='shift'){
+    h=`<p class="step" style="margin-top:12px">Spot the shift</p>
+       <p class="q">${q.b.name}: ${q.b.pri.label} to ${q.b.sec.label}. Do the secondary arrows line up with the primary, or turn 30°?</p>
+       <div class="diagrams" style="max-width:640px">
+         <div class="dia"><h3>Primary</h3><svg id="gPri" viewBox="0 0 260 250"></svg></div>
+         <div class="dia"><h3>Secondary</h3><svg id="gSec" viewBox="0 0 260 250"></svg></div>
+       </div>`;
+  } else {
+    h=`<p class="step" style="margin-top:12px">Tie or no tie</p>
+       <p class="q">You want to parallel these two banks on the low side. Safe to tie them together?</p>
+       <div class="pair">
+         <div class="card"><div class="big">Bank 1: ${q.a.name}</div><div class="plate">${q.a.sec.label} secondary</div></div>
+         <div class="card"><div class="big">Bank 2: ${q.c.name}</div><div class="plate">${q.c.sec.label} secondary</div></div>
+       </div>`;
+  }
+  h+=`<div class="choices" id="choices">${q.labels.map((l,i)=>`<button class="choice${q.type==='meter'?'':' wide'}" id="ch${i}" data-i="${i}">${l}</button>`).join('')}</div><div id="fb"></div>`;
+  area.innerHTML=h;
+  if(q.type==='meter') draw($('#gSvg'),{side:q.b.sec,rot:q.b.shift,meter:q.pair,meterLabel:false});
+  if(q.type==='shift'){
+    draw($('#gPri'),{side:q.b.pri.type==='wye'?{type:'wye',v:7200}:{type:'delta',v:12470},rot:0});
+    draw($('#gSec'),{hidden:true});
+  }
+  area.querySelectorAll('.choice').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+  updateHud();
+}
+function answer(i){
+  if(answered) return; answered=true;
+  const q=Q,ok=q.opts[i]===q.ans;
+  const right=q.opts.indexOf(q.ans);
+  document.querySelectorAll('.choice').forEach((b,j)=>{b.disabled=true;if(j===right)b.classList.add('right');else if(j===i)b.classList.add('wrong');});
+  if(ok){streak++;score+=100+25*(streak-1);if(streak>best){best=streak;store.set('tvb-best',best);}} else streak=0;
+  let why='';
+  if(q.type==='meter'){
+    draw($('#gSvg'),{side:q.b.sec,rot:q.b.shift,meter:q.pair,meterLabel:true});
+    const hasN=q.pair.includes('N');
+    if(q.b.sec.type==='hl'&&hasN&&q.pair.includes('B')) why='B to N on a high-leg delta reaches from the far corner to the center tap: 208 V. That is the wild leg.';
+    else if(hasN&&q.b.sec.type==='hl') why='The center tap splits the A–C side in half: 240 ÷ 2 = 120 V.';
+    else if(hasN) why=`Phase to neutral is one arrow length: ${q.ans} V.`;
+    else if(q.b.sec.type==='wye') why=`Phase to phase is the gap between two tips: ${q.b.sec.v} × 1.73 = ${q.ans} V.`;
+    else why='Corner to corner on a delta is one full side: 240 V.';
+  } else if(q.type==='shift'){
+    draw($('#gSec'),{side:q.b.sec,rot:q.b.shift,ghost:true});
+    why=q.b.shift?'Wye on one side and delta on the other always turns the arrows 30°. The low side lags the high side.':'Same shape on both sides (wye–wye or delta–delta) keeps the arrows lined up.';
+  } else {
+    const R=q.a.sec.type==='wye'?q.a.sec.v:q.a.sec.v/SQ3;
+    const gap=Math.round(2*R*Math.sin(15*D2R));
+    why=q.ans?'Same voltage and both banks have the same shift, so the arrows line up. A meter from A to A across the two banks reads about 0 V.'
+      :`Same voltage on paper, but one bank is turned 30° and the other is not. A meter from A to A across the banks would read about ${gap} V. Tie them and that difference drives huge circulating current. Banks must match shift, not just voltage.`;
+  }
+  $('#fb').innerHTML=`<div class="fb"><div class="big ${ok?'ok':'no'}">${ok?'Correct':'Not quite'}</div><p>${why}</p></div>`;
+  $('#nextBtn').hidden=false;$('#nextBtn').focus({preventScroll:true});
+  updateHud();
+}
+function updateHud(){$('#score').textContent=score;$('#streak').textContent=streak;$('#best').textContent=best;$('#round').textContent=round;}
+$('#nextBtn').onclick=()=>{round++;Q=makeQ();renderQ();};
+
+/* ---------- Tabs + keys ---------- */
+function tab(which){
+  const g=which==='game';
+  $('#learn').hidden=g;$('#game').hidden=!g;
+  $('#tabLearn').setAttribute('aria-selected',!g);$('#tabGame').setAttribute('aria-selected',g);
+  if(g&&!Q){Q=makeQ();renderQ();}
+  try{localStorage.setItem('tvb-tab',which);}catch(e){}
+}
+$('#tabLearn').onclick=()=>tab('learn');$('#tabGame').onclick=()=>tab('game');
+document.addEventListener('keydown',e=>{
+  if($('#game').hidden) return;
+  if(/^[1-4]$/.test(e.key)){const b=$('#ch'+(+e.key-1));if(b&&!b.disabled)b.click();}
+  if(e.key==='n'||e.key==='N'){if(answered)$('#nextBtn').click();}
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{renderLearn();if(Q&&!$('#game').hidden)renderQ();});
+new MutationObserver(()=>{renderLearn();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+window.addEventListener('resize',sizeCanvas);
+sizeCanvas();renderLearn();requestAnimationFrame(frame);
+let saved='learn';try{saved=localStorage.getItem('tvb-tab')||'learn';}catch(e){}
+tab(saved);
+})();
+</script>
+
+</body></html>
