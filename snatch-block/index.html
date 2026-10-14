@@ -237,37 +237,37 @@ h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);margin:4px 0 4p
 .where div span:first-child{font-family:var(--mono);color:var(--fg)}
 .where p{margin:4px 0 0;font-size:.85rem}
 .play.stack{grid-template-columns:minmax(0,1fr)}
-.bench.rig{background:#ffffff;border-color:#cfd3d8;color:#1f2328;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.6fr);grid-template-areas:"head head" "diag tbl" "form tbl" "q q";gap:6px 18px;padding:16px 18px}
+.bench.rig{background:var(--panel);border-color:var(--line);color:var(--fg);display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.6fr);grid-template-areas:"head head" "diag tbl" "form tbl" "q q";gap:6px 18px;padding:16px 18px}
 @media (max-width:760px){.bench.rig{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "diag" "form" "tbl" "q"}}
-.bench.rig .benchHead{grid-area:head;color:#5b616b}
+.bench.rig .benchHead{grid-area:head;color:var(--muted)}
 .bench.rig #diag{grid-area:diag;max-height:52vh}
-.rigTbl{grid-area:tbl;align-self:start;border:1px solid #9aa0a8;font-family:var(--body);font-size:.85rem;max-width:220px}
-.rigTbl .th{display:grid;grid-template-columns:1fr 1fr;background:#7a1f2b;color:#fff;font-weight:600;font-size:.72rem;text-align:center}
-.rigTbl .th span{padding:4px}
-.rigTbl .tr{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #9aa0a8}
+.rigTbl{grid-area:tbl;align-self:start;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-family:var(--body);font-size:.85rem;max-width:220px;background:var(--bg)}
+.rigTbl .th{display:grid;grid-template-columns:1fr 1fr;background:var(--panel2);color:var(--accent);font-family:var(--display);font-weight:700;font-size:.78rem;letter-spacing:.04em;text-align:center;border-bottom:2px solid var(--accent)}
+.rigTbl .th span{padding:6px 4px}
+.rigTbl .tr{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
 .rigTbl .tr>*{display:flex;align-items:center;justify-content:center;padding:4px}
-.rigTbl .tr>*+*{border-left:1px solid #9aa0a8;font-weight:700;font-size:1rem;color:#1f2328}
+.rigTbl .tr>*+*{border-left:1px solid var(--line);font-family:var(--mono);font-weight:600;font-size:1.05rem;color:var(--accent)}
 .rigTbl svg{width:72px;height:44px}
-.rigTbl svg line{stroke:#2b2f36;stroke-width:2}.rigTbl svg circle{fill:#2b2f36}.rigTbl svg text{font-size:8px;fill:#2b2f36;font-family:var(--body)}
-.rigForm{grid-area:form;display:flex;flex-direction:column;gap:10px;font-family:var(--body);font-weight:700;font-size:1.25rem;color:#1f2328;padding:4px 0 0 8px}
+.rigTbl svg line{stroke:var(--rope);stroke-width:2}.rigTbl svg circle{fill:var(--accent)}.rigTbl svg text{font-size:8px;fill:var(--muted);font-family:var(--mono)}
+.rigForm{grid-area:form;display:flex;flex-direction:column;gap:10px;font-family:var(--display);font-weight:700;font-size:1.2rem;color:var(--fg);padding:4px 0 0 8px}
 .rf{display:flex;align-items:center;gap:10px}
-.rf .fr{display:inline-flex;flex-direction:column;align-items:center;font-size:1.05rem}
-.rf .fr span:first-child{border-bottom:2px solid #1f2328;padding:0 4px}
+.rf .fr{display:inline-flex;flex-direction:column;align-items:center;font-size:1.02rem;font-family:var(--mono);color:var(--accent)}
+.rf .fr span:first-child{border-bottom:2px solid var(--accent);padding:0 4px}
 .rf sup{font-size:.6em}
-.rigQ{grid-area:q;margin:6px 0 0;font-size:1.15rem;line-height:1.5;color:#1f2328}
-#diag .tk-pole{fill:#c9a46a;stroke:#7a5c35;stroke-width:1.5}
-#diag .tk-log{stroke:#c9a46a;stroke-width:15;stroke-linecap:round}
-#diag .tk-logline{stroke:#7a5c35;stroke-width:1.2;opacity:.6}
-#diag .tk-rope{fill:none;stroke:#2b2f36;stroke-width:2.2;stroke-linecap:round}
-#diag .tk-part{stroke:#2b2f36;stroke-width:1.6}
-#diag .tk-blk{fill:#e3e6ea;stroke:#2b2f36;stroke-width:1.8}
-#diag .tk-hub{fill:#2b2f36}
-#diag .tk-arc{fill:none;stroke:#7a1f2b;stroke-width:1.6}
-#diag text.tk-ang{font-family:var(--body);font-size:13px;font-weight:700;fill:#7a1f2b}
-#diag text.tk-lbl{font-family:var(--body);font-size:13px;font-weight:700;fill:#1f2328}
-#diag text.tk-val{font-family:var(--mono);font-size:12px;font-weight:600;fill:#15803d;paint-order:stroke;stroke:#fff;stroke-width:4px}
-#diag text.tk-sub{font-family:var(--body);font-size:12px;fill:#3b4048}
-#diag .tk-head{fill:#2b2f36}
+.rigQ{grid-area:q;margin:6px 0 0;font-size:1.1rem;line-height:1.5;color:var(--fg)}
+#diag .tk-pole{fill:#8b6b43;stroke:#5e4628;stroke-width:1.5}
+#diag .tk-log{stroke:#8b6b43;stroke-width:15;stroke-linecap:round}
+#diag .tk-logline{stroke:#5e4628;stroke-width:1.2;opacity:.8}
+#diag .tk-rope{fill:none;stroke:var(--rope);stroke-width:2.2;stroke-linecap:round}
+#diag .tk-part{stroke:var(--rope);stroke-width:1.6}
+#diag .tk-blk{fill:var(--panel2);stroke:var(--rope);stroke-width:1.8}
+#diag .tk-hub{fill:var(--rope)}
+#diag .tk-arc{fill:none;stroke:var(--accent);stroke-width:1.8}
+#diag text.tk-ang{font-family:var(--mono);font-size:13px;font-weight:600;fill:var(--accent)}
+#diag text.tk-lbl{font-family:var(--display);font-size:13px;font-weight:700;fill:var(--fg)}
+#diag text.tk-val{font-family:var(--mono);font-size:12px;font-weight:600;fill:var(--good);paint-order:stroke;stroke:var(--panel);stroke-width:4px}
+#diag text.tk-sub{font-family:var(--body);font-size:12px;fill:var(--muted)}
+#diag .tk-head{fill:var(--rope)}
 .sheet.rp1 .s1,.sheet.rp2 .s2,.sheet.rp3 .s3{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .sheet.rp1 .s1 .secHead,.sheet.rp2 .s2 .secHead,.sheet.rp3 .s3 .secHead{color:var(--accent)}
 .sheet.rp2 .s1 .secHead,.sheet.rp3 .s1 .secHead,.sheet.rp3 .s2 .secHead,.sheet.rp4 .secHead{color:var(--muted)}
@@ -682,7 +682,7 @@ function drawRig(p,o){
   if(show){
     const mid=(a,b)=>V((a.x+b.x)/2,(a.y+b.y)/2);
     txt(add(mid(hTop,S1),V(-10,0)),'HL '+fmt(p.hl),'tk-val','end');
-    txt(add(mid(S1,S2),mul(V(-out1.y,out1.x),-16)),'LO₁ '+fmt(p.lo1),'tk-val');
+    txt(add(mid(S1,S2),mul(V(-out1.y,out1.x),20)),'LO₁ '+fmt(p.lo1),'tk-val');
     txt(add(mid(S2,E),V(14,0)),'LO₂ '+fmt(p.lo2),'tk-val','start');
     txt(V(U.x+16,U.y-18),'Hook strain '+fmt(p.hs),'tk-val','start');
   }
@@ -706,7 +706,7 @@ function buildRigSheet(){
   const mir=id=>`<span class="mirror" id="${id}">—</span>`;
   $('sheet').innerHTML=`
   <div class="sec s1"><div class="secHead">Pass 1 · The blocks<small>P = ${p.P} · W = ${fmt(p.W)}</small></div>
-   <div class="lrow"><span class="blk">Haul</span><label><span class="lt">1.1ᴾ <span class="opt">optional</span></span>${inp('c-rf','friction 1.1 to the P, optional','af')}</label><span class="op">× W ÷ P =</span><label>Haul line${inp('c-rhl','haul line')}</label></div>
+   <div class="lrow"><span class="blk">Haul</span><span class="op">1.1ᴾ × W ÷ P =</span><label>Haul line${inp('c-rhl','haul line')}</label></div>
    <div class="lrow"><span class="blk">Hook</span><label>Haul line${mir('mhl1')}</label><span class="op">+ W =</span><label>Hook strain${inp('c-rhs','hook strain')}</label></div></div>
   <div class="sec s2"><div class="secHead">Pass 2 · Line outs<small>Line out = Line in × 1.1</small></div>
    <div class="lrow"><span class="blk">SB1</span><label>Line in = haul line${mir('mhl2')}</label><span class="op">× 1.1 =</span><label>LO₁${inp('c-rlo1','SB1 line out')}</label></div>
@@ -715,16 +715,16 @@ function buildRigSheet(){
    <div class="lrow"><span class="blk">SB1</span><label>LO₁${mir('mlo1b')}</label><span class="op">×</span><label><span class="lt">Factor <span class="ang">at ${p.t1}°</span><span class="opt">optional</span></span>${inp('c-raf1','SB1 angle factor, optional','af')}</label><span class="op">=</span><label>SBT₁${inp('c-rsb1','SB1 tension')}</label></div>
    <div class="lrow"><span class="blk">SB2</span><label>LO₂${mir('mlo2')}</label><span class="op">×</span><label><span class="lt">Factor <span class="ang">at ${p.t2}°</span><span class="opt">optional</span></span>${inp('c-raf2','SB2 angle factor, optional','af')}</label><span class="op">=</span><label>SBT₂${inp('c-rsb2','SB2 tension')}</label></div></div>`;
 }
-const RIGIN={1:['c-rf','c-rhl','c-rhs'],2:['c-rlo1','c-rlo2'],3:['c-raf1','c-rsb1','c-raf2','c-rsb2']};
+const RIGIN={1:['c-rhl','c-rhs'],2:['c-rlo1','c-rlo2'],3:['c-raf1','c-rsb1','c-raf2','c-rsb2']};
 const RIGO={1:['c-rhl','c-rhs'],2:['c-rlo1','c-rlo2'],3:['c-rsb1','c-rsb2']};
-const OPT=new Set(['c-rf','c-raf1','c-raf2']);
+const OPT=new Set(['c-raf1','c-raf2']);
 const rigMir=()=>{const sh=(id,src)=>{const v=val(src);$(id).textContent=isFinite(v)?fmt(v):'—'};sh('mhl1','c-rhl');sh('mhl2','c-rhl');sh('mlo1','c-rlo1');sh('mlo1b','c-rlo1');sh('mlo2','c-rlo2')};
 function setPhaseRig(ph){
   S.phase=ph;$('sheet').className='sheet rp'+ph;rigMir();
   [1,2,3].forEach(k=>RIGIN[k].forEach(id=>{const e=$(id);if(ph===4)return;e.disabled=k!==ph;e.classList.toggle('locked',k<ph)}));
   ['pass1','pass2','pass3'].forEach((id,k)=>{$(id).className='pass '+(k+1===ph?'on':k+1<ph?'done':'')});
   const act=$('btnAct');
-  const I={1:`<b>Pass 1.</b> Haul line = 1.1ᴾ × W ÷ P. Use 1.1ᴾ, or multiply the weight by 1.1 once for every part, then divide by P. Either way works. Then hook strain = haul line + W.`,
+  const I={1:`<b>Pass 1.</b> Haul line = 1.1ᴾ × W ÷ P. Work it your way: 1.1ᴾ on the calculator, or the weight × 1.1 once for every part, then ÷ P. Then hook strain = haul line + W.`,
            2:`<b>Pass 2.</b> Line outs. SB1's line in is the haul line, not the hook strain. × 1.1, then × 1.1 again for SB2.`,
            3:`<b>Pass 3.</b> Back to SB1. SBT = that block's line out × the angle factor from the table. The factor boxes are optional.`,
            4:`<b>Graded.</b> Green is right. Amber is wrong, with the correct value under it. The picture now shows every number.`};
@@ -735,7 +735,7 @@ function setPhaseRig(ph){
 }
 function gradeRig(){
   const p=S.prob,u={};Object.values(RIGIN).flat().forEach(id=>u[id]=val(id));
-  const T={'c-rf':p.fr,'c-rhl':p.hl,'c-rhs':p.hs,'c-rlo1':p.lo1,'c-rlo2':p.lo2,'c-raf1':p.af1,'c-rsb1':p.sbt1,'c-raf2':p.af2,'c-rsb2':p.sbt2};
+  const T={'c-rhl':p.hl,'c-rhs':p.hs,'c-rlo1':p.lo1,'c-rlo2':p.lo2,'c-raf1':p.af1,'c-rsb1':p.sbt1,'c-raf2':p.af2,'c-rsb2':p.sbt2};
   const okF=(v,a)=>isFinite(v)&&Math.abs(v-a)<=Math.max(.006,Math.abs(a)*.005);
   let right=0,total=0;
   Object.keys(T).forEach(id=>{const e0=$(id);if(OPT.has(id)&&!isFinite(u[id])){e0.disabled=true;e0.classList.remove('locked');return}total++;const isF=id==='c-rf'||id.startsWith('c-raf');const ok=isF?okF(u[id],T[id]):near(u[id],T[id]);
